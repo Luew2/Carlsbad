@@ -58,7 +58,8 @@ Go to any website from which you want to extract the design system (e.g., https:
 
 ## Screenshots
 
-*Note: Include screenshots of your extension in action to showcase its features.*
+![Screenshot 1](./screenshots/webflow.png)
+
 
 ## Development
 
