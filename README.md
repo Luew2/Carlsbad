@@ -1,4 +1,4 @@
-# Design System Extractor Chrome Extension
+# Design System Extractor Chrome Extension <img src="./icons/icon128.png" alt="Design System Extractor Logo" width="8%" />
 
 ## Overview
 
