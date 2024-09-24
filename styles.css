@@ -70,6 +70,7 @@ body {
   
   .font-sample {
     font-size: 14px;
+    cursor: pointer;
   }
   
   #buttons {
@@ -81,17 +82,74 @@ body {
   .button-wrapper {
     display: flex;
     align-items: center;
-    margin-bottom: 5px;
-    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    max-width: 150px; /* Set max width as desired */
+    min-width: 150px;
+  }
+  
+  .button-container {
+    flex: 1;
+    max-width: 150px; /* Set the maximum width for buttons */
   }
   
   .extracted-button {
-    padding: 8px 12px;
-    cursor: default;
-    margin-right: 10px;
-    flex-grow: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
   }
   
   .copy-css-btn {
     margin-left: 10px;
+    padding: 5px 10px;
+    flex-shrink: 0;
   }
+  
+  .font-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 5px;
+    margin-bottom: 5px;
+  }
+  
+  .font-sample {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .copy-font-btn {
+    margin-left: 10px;
+    padding: 2px 5px;
+    flex-shrink: 0;
+  }
+
+
+/* Export Buttons */
+#export-buttons {
+  display: flex;
+  justify-content: space-between; /* Place buttons at the far ends */
+  align-items: center;            /* Center align vertically */
+  margin-top: 10px;               /* Add some space above */
+}
+
+#export-buttons button {
+  flex: 1;                        /* Buttons take equal space */
+  padding: 10px;
+  font-size: 14px;
+  margin: 0 5px;                  /* Space between buttons */
+}
+
+#export-buttons button:first-child {
+  margin-left: 0;                 /* Remove left margin for first button */
+}
+
+#export-buttons button:last-child {
+  margin-right: 0;                /* Remove right margin for last button */
+}

@@ -67,13 +67,44 @@
       return hex.toUpperCase();
     }
   
-    function resolveCssVariable(value, element = document.documentElement) {
-      if (!value.startsWith('var(')) {
-        return value;
+    function resolveCssVariable(value, element, property) {
+      const maxDepth = 10; // Prevent potential infinite loops
+      let depth = 0;
+    
+      while (value && value.trim().startsWith('var(') && depth < maxDepth) {
+        const varMatch = value.match(/var\((--[^,\s)]+)(?:,\s*([^)]+))?\)/);
+        if (varMatch) {
+          const varName = varMatch[1];
+          const fallback = varMatch[2];
+    
+          // Get the value of the CSS variable
+          const computedStyle = getComputedStyle(element);
+          const varValue = computedStyle.getPropertyValue(varName);
+    
+          if (varValue && varValue.trim() !== '') {
+            value = varValue.trim();
+          } else if (fallback) {
+            value = fallback.trim();
+          } else {
+            // If no value or fallback, exit the loop
+            break;
+          }
+        } else {
+          break;
+        }
+        depth++;
       }
-      const varName = value.slice(4, -1).trim();
-      const resolvedValue = getComputedStyle(element).getPropertyValue(varName);
-      return resolvedValue || value;
+    
+      // If the value is still a CSS variable (couldn't resolve), try to compute it
+      if (value && value.trim().startsWith('--')) {
+        const computedStyle = getComputedStyle(element);
+        const varValue = computedStyle.getPropertyValue(value.trim());
+        if (varValue && varValue.trim() !== '') {
+          value = varValue.trim();
+        }
+      }
+    
+      return value;
     }
   
     function processColor(color) {
@@ -114,31 +145,36 @@
   
     function processButtonStyles(buttonElement) {
       const computedStyles = getComputedStyle(buttonElement);
+      
+    // Exclude buttons that are not visible or are inline elements
+    if (
+      computedStyles.getPropertyValue('display') === 'none' ||
+      computedStyles.getPropertyValue('visibility') === 'hidden' ||
+      computedStyles.getPropertyValue('opacity') === '0' ||
+      computedStyles.getPropertyValue('display') === 'inline' ||
+      computedStyles.getPropertyValue('display') === 'contents'
+    ) {
+      return;
+    }
   
-      // Exclude buttons that are not visible
-      if (
-        computedStyles.getPropertyValue('display') === 'none' ||
-        computedStyles.getPropertyValue('visibility') === 'hidden' ||
-        computedStyles.getPropertyValue('opacity') === '0'
-      ) {
-        return;
-      }
-  
-      // Collect relevant style properties
-      const styleProperties = [
-        'background-color',
-        'color',
-        'border',
-        'border-radius',
-        'padding',
-        'font-size',
-        'font-family',
-        'font-weight',
-        'text-transform',
-        'text-decoration',
-        'box-shadow',
-        // Add more properties as needed
-      ];
+    const styleProperties = [
+      'background-color',
+      'color',
+      'border',
+      'border-radius',
+      'padding',
+      'margin',
+      'font-size',
+      'font-family',
+      'font-weight',
+      'text-transform',
+      'text-decoration',
+      'box-shadow',
+      'opacity',
+      'width',
+      'height',
+      // Add any other properties that are relevant
+    ];
   
       const styleObject = {};
   
@@ -150,32 +186,96 @@
           value !== 'inherit' &&
           value !== 'unset' &&
           value !== 'normal' &&
-          value !== 'none' &&
-          value.trim() !== ''
+          value.trim() !== '' &&
+          value !== 'none'
         ) {
-          value = resolveCssVariable(value.trim(), buttonElement);
-          styleObject[prop] = value;
+          // Resolve CSS variables
+          value = resolveCssVariable(value.trim(), buttonElement, prop);
+          // If the value is still not valid after resolving, skip it
+          if (value && value.trim() !== '' && value !== 'none') {
+            styleObject[prop] = value.trim();
+          }
         }
       });
   
-      // Check if the button has minimal styling to be meaningful
+      // Check if the button has minimal styling
       const essentialProperties = ['background-color', 'color', 'border', 'padding'];
       const hasEssentialStyles = essentialProperties.some(prop => styleObject[prop] && styleObject[prop] !== '');
   
+      // Check if the button has meaningful styling
+      const hasMeaningfulStyle =
+        (styleObject['background-color'] && !isTransparentOrEmptyBackground(styleObject['background-color'])) ||
+        (styleObject['border'] && !isZeroBorder(styleObject['border']));
+  
+
+      console.log('Processing button:', buttonElement);
+      console.log('Computed styles:', styleObject);
+      console.log('Has meaningful style:', hasMeaningfulStyle);
+      
+      if (!hasMeaningfulStyle) {
+        // Skip buttons without meaningful styling
+        console.log('Skipping button with styles:', styleObject);
+        return;
+      }
+
       if (!hasEssentialStyles) {
         // Skip buttons without essential styling
+        console.log('Skipping button with styles:', styleObject);
         return;
       }
   
       // Convert style object to CSS text
-      const cssText = Object.entries(styleObject)
-        .map(([prop, value]) => `${prop}: ${value};`)
-        .join(' ');
+      // const cssText = Object.entries(styleObject)
+      //   .map(([prop, value]) => `${prop}: ${value};`)
+      //   .join(' ');
   
-      if (cssText.trim() !== '') {
-        designSystem.buttons[cssText] = (designSystem.buttons[cssText] || 0) + 1;
+      if (Object.keys(styleObject).length > 0) {
+        // Store the styleObject directly instead of cssText
+        const styleKey = JSON.stringify(styleObject);
+        designSystem.buttons[styleKey] = (designSystem.buttons[styleKey] || 0) + 1;
+        console.log('Added button with styles:', styleObject);
       }
     }
+  
+    // Helper function to check for transparent or empty backgrounds
+    function isTransparentOrEmptyBackground(color) {
+      if (!color || color === 'transparent') return true;
+
+      const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (rgbaMatch) {
+        const alpha = rgbaMatch[4];
+        if (alpha !== undefined && parseFloat(alpha) === 0) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+  
+    // Helper function to check for zero borders
+    function isZeroBorder(border) {
+      if (!border || border.trim() === '') return true;
+      if (border === 'none' || border === '0' || border === '0px') return true;
+      return /^0(?:px|em|rem|%)?\s+none\b/.test(border);
+    }
+
+    // function hasSignificantPadding(padding) {
+    //   if (!padding) return false;
+    
+    //   // Split padding values and check if any are greater than zero
+    //   const values = padding.split(' ').map(val => parseFloat(val));
+    //   return values.some(val => val > 4); // Adjust threshold as needed
+    // }
+  
+    // Helper function to check for default text colors
+    // function isDefaultTextColor(color) {
+    //   const defaultColors = [
+    //     'rgb(0, 0, 0)',
+    //     'rgb(255, 255, 255)',
+    //     'rgb(33, 39, 42)', // Add other default colors as needed
+    //   ];
+    //   return defaultColors.includes(color);
+    // }
   
     function extractDesignSystem() {
       const allElements = document.querySelectorAll('*');
@@ -250,7 +350,8 @@
       const sortedButtons = Object.entries(designSystem.buttons)
         .sort((a, b) => b[1] - a[1])
         .map((entry) => ({
-          styles: entry[0],
+          styles: JSON.parse(entry[0]), // Parse the JSON string back into an object
+          count: entry[1],
         }));
   
       // Save the data to local storage
