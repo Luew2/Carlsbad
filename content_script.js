@@ -4,8 +4,208 @@
       colors: {},
       fonts: {},
       buttons: {},
+      components: [],
       logoUrl: ''
     };
+
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.action === 'enableSelectionMode') {
+        enableSelectionMode();
+      }
+    });
+
+    function saveComponentScreenshot(screenshotDataUrl) {
+      const hostname = window.location.hostname;
+    
+      chrome.storage.local.get({ componentsByHost: {} }, (data) => {
+        const componentsByHost = data.componentsByHost;
+        const components = componentsByHost[hostname] || [];
+    
+        components.push({
+          name: 'Selected Component',
+          screenshot: screenshotDataUrl,
+        });
+    
+        componentsByHost[hostname] = components;
+    
+        chrome.storage.local.set({ componentsByHost }, () => {
+          console.log('Component screenshot saved for hostname:', hostname);
+          displaySuccessMessage();
+        });
+      });
+    }
+    
+    function displaySuccessMessage() {
+      const message = document.createElement('div');
+      message.innerText = 'Component captured!';
+      message.style.position = 'fixed';
+      message.style.bottom = '20px';
+      message.style.right = '20px';
+      message.style.backgroundColor = '#4CAF50';
+      message.style.color = '#fff';
+      message.style.padding = '10px';
+      message.style.borderRadius = '5px';
+      message.style.zIndex = 10000;
+      document.body.appendChild(message);
+    
+      setTimeout(() => {
+        message.parentNode.removeChild(message);
+      }, 3000);
+    }
+
+    function enableSelectionMode() {
+      // Indicate selection mode is active
+      console.log('Selection Mode Enabled');
+    
+      // Visual feedback (e.g., overlay or tooltip)
+      const overlay = createOverlay();
+      document.body.appendChild(overlay);
+    
+      document.body.style.cursor = 'crosshair';
+    
+      function handleMouseOver(event) {
+        event.target.style.outline = '2px solid blue';
+      }
+    
+      function handleMouseOut(event) {
+        event.target.style.outline = '';
+      }
+    
+      function handleClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+    
+        const element = event.target;
+        const rect = element.getBoundingClientRect();
+
+        // Capture the screenshot
+        captureComponentScreenshot(rect);
+    
+        // Clean up
+        event.target.style.outline = '0px solid blue';
+        exitSelectionMode();
+      }
+    
+      function exitSelectionMode() {
+        document.body.style.cursor = '';
+        document.removeEventListener('click', handleClick, true);
+        document.removeEventListener('mouseover', handleMouseOver, true);
+        document.removeEventListener('mouseout', handleMouseOut, true);
+        removeOverlay();
+
+      }
+    
+      document.addEventListener('click', handleClick, true);
+      document.addEventListener('mouseover', handleMouseOver, true);
+      document.addEventListener('mouseout', handleMouseOut, true);
+    }
+    
+    function captureComponentScreenshot(rect) {
+      console.log('Capturing screenshot of component:', rect);
+      removeOverlay();
+    
+      // Wait for the next repaint to ensure the overlay is removed
+      requestAnimationFrame(() => {
+        chrome.runtime.sendMessage(
+          {
+            action: 'captureScreenshot',
+            rect: {
+              x: rect.left,
+              y: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+          },
+          (response) => {
+            if (response && response.screenshot) {
+              console.log('Received screenshot response:', response);
+              // Save the screenshot data for later use
+              saveComponentScreenshot(response.screenshot);
+            } else {
+              console.error('Failed to capture screenshot');
+            }
+          }
+        );
+      });
+    }
+
+    function createOverlay() {
+      const overlay = document.createElement('div');
+      overlay.id = 'extension-selection-overlay';
+      overlay.style.position = 'fixed';
+      overlay.style.top = 0;
+      overlay.style.left = 0;
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.zIndex = 10000;
+      overlay.style.backgroundColor = 'rgba(0,0,0,0.2)';
+      overlay.style.pointerEvents = 'none'; // Allow clicks to pass through
+      return overlay;
+    }
+
+    function removeOverlay() {
+      const overlay = document.getElementById('extension-selection-overlay');
+      if (overlay) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    }
+
+    function detectNavbar() {
+      const navbar = document.querySelector('nav');
+      if (navbar) {
+        processComponent(navbar, 'Navbar');
+      }
+    }
+    
+    function detectHeroSection() {
+      const hero = document.querySelector('.hero, header');
+      if (hero) {
+        processComponent(hero, 'Hero Section');
+      }
+    }
+    
+    function detectTiles() {
+      const tiles = document.querySelectorAll('.card, .tile');
+      if (tiles.length > 0) {
+        tiles.forEach((tile, index) => {
+          processComponent(tile, `Tile/Card ${index + 1}`);
+        });
+      }
+    }
+    
+    function detectFooter() {
+      const footer = document.querySelector('footer');
+      if (footer) {
+        processComponent(footer, 'Footer');
+      }
+    }
+
+    function processComponent(element, name) {
+      const clone = element.cloneNode(true);
+    
+      // Collect computed styles
+      inlineAllStyles(clone);
+    
+      // Serialize HTML
+      const serializer = new XMLSerializer();
+      const componentHTML = serializer.serializeToString(clone);
+    
+      // Store the component
+      designSystem.components.push({
+        name,
+        html: componentHTML
+      });
+    }
+    
+    function inlineAllStyles(element) {
+      const nodes = element.querySelectorAll('*');
+      nodes.forEach((node) => {
+        const computedStyle = window.getComputedStyle(node);
+        for (const key of computedStyle) {
+          node.style[key] = computedStyle.getPropertyValue(key);
+        }
+      });
+    }
   
     function isValidColor(color) {
       if (
@@ -353,13 +553,22 @@
           styles: JSON.parse(entry[0]), // Parse the JSON string back into an object
           count: entry[1],
         }));
+        
+        
+      designSystem.components = [];
   
+      // Detect components
+      // detectNavbar();
+      // detectHeroSection();
+      // detectTiles();
+      // detectFooter();
       // Save the data to local storage
       const dataToStore = {
         designSystem: {
           colors: sortedColors,
           fonts: sortedFonts,
           buttons: sortedButtons,
+          components: designSystem.components,
           logoUrl: designSystem.logoUrl
         },
         url: window.location.hostname,
@@ -368,6 +577,7 @@
       chrome.storage.local.set(dataToStore, () => {
         console.log('Design system stored:', dataToStore);
       });
+
     }
   
     // Run extraction when the content script is loaded

@@ -130,6 +130,37 @@ body {
     flex-shrink: 0;
   }
 
+/* Existing styles for .component-wrapper and .component-preview */
+.component-wrapper {
+  position: relative; /* To position delete button within this container */
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.component-preview {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #ccc;
+  padding: 5px;
+  background-color: #fff;
+}
+
+/* Styles for the delete button */
+.delete-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.delete-button:hover {
+  color: red; /* Change color on hover to indicate action */
+}
 
 /* Export Buttons */
 #export-buttons {

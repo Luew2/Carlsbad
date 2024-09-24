@@ -244,19 +244,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const hostname = currentUrl.hostname;
 
     // Retrieve data from storage
-    chrome.storage.local.get(['designSystem', 'url'], (data) => {
+    chrome.storage.local.get(['designSystem', 'url', 'componentsByHost'], (data) => {
       if (data.designSystem && data.url === hostname) {
         const { colors, fonts, buttons, logoUrl } = data.designSystem;
         const colorsList = document.getElementById('colors');
         const fontsList = document.getElementById('fonts');
         const logoContainer = document.getElementById('logo');
         const buttonsContainer = document.getElementById('buttons');
+        const componentsContainer = document.getElementById('components');
 
+        // Retrieve components for the current hostname
+        const components = (data.componentsByHost && data.componentsByHost[hostname]) || [];
+        console.log('Components for current hostname:', components);
+        console.log('Data:', data);
         // Clear any existing content
         colorsList.innerHTML = '';
         fontsList.innerHTML = '';
         logoContainer.innerHTML = '';
         buttonsContainer.innerHTML = '';
+        componentsContainer.innerHTML = '';
 
         // Display logo
         if (logoUrl) {
@@ -292,8 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           });
 
-
-
           // Display buttons
           buttons.forEach((item, index) => {
             const { styles } = item;
@@ -313,6 +317,73 @@ document.addEventListener('DOMContentLoaded', () => {
             buttonWrapper.appendChild(button);
             buttonsContainer.appendChild(buttonWrapper);
           });
+
+          chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            if (request.action === 'screenshotCaptured') {
+              const { screenshot, name } = request;
+          
+              const componentWrapper = document.createElement('div');
+              componentWrapper.className = 'component-wrapper';
+          
+              const componentName = document.createElement('h3');
+              componentName.textContent = name;
+          
+              const componentPreview = document.createElement('img');
+              componentPreview.className = 'component-preview';
+              componentPreview.src = screenshot;
+          
+              console.log('Received screenshot in popup.js:', screenshot);
+          
+              componentWrapper.appendChild(componentName);
+              componentWrapper.appendChild(componentPreview);
+              componentsContainer.appendChild(componentWrapper);
+            }
+          });
+          
+
+          // Display components
+          components.forEach((component, index) => {
+            const componentWrapper = document.createElement('div');
+            componentWrapper.className = 'component-wrapper';
+
+            const componentPreview = document.createElement('img');
+            componentPreview.className = 'component-preview';
+            componentPreview.src = component.screenshot;
+
+            // Create the delete button
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-button';
+            deleteButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M9 3V4H4V6H5V21A1 1 0 0 0 6 22H18A1 1 0 0 0 19 21V6H20V4H15V3H9M7 6H17V20H7V6Z" />
+            </svg>`;
+            deleteButton.addEventListener('click', () => {
+              // Confirm deletion (optional)
+              if (confirm('Are you sure you want to delete this component?')) {
+                // Remove the component from storage
+                removeComponent(index, hostname);
+                // Remove the component from the UI
+                componentWrapper.remove();
+              }
+            });
+
+            // Append elements
+            componentWrapper.appendChild(componentPreview);
+            componentWrapper.appendChild(deleteButton);
+            componentsContainer.appendChild(componentWrapper);
+          });
+
+          function removeComponent(index, hostname) {
+            chrome.storage.local.get({ componentsByHost: {} }, (data) => {
+              const componentsByHost = data.componentsByHost;
+              if (componentsByHost[hostname]) {
+                componentsByHost[hostname].splice(index, 1);
+                chrome.storage.local.set({ componentsByHost }, () => {
+                  console.log(`Component at index ${index} removed for hostname ${hostname}`);
+                });
+              }
+            });
+          }
+
 
           function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
@@ -345,6 +416,23 @@ document.addEventListener('DOMContentLoaded', () => {
             elem.addEventListener('click', () => {
               const css = elem.dataset.css;
               copyToClipboard(css);
+            });
+          });
+
+          // Copy component HTML
+          document.querySelectorAll('.copy-html-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const html = btn.dataset.html;
+              copyToClipboard(html);
+            });
+          });
+
+          document.getElementById('select-component-button').addEventListener('click', () => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+              chrome.tabs.sendMessage(tabs[0].id, { action: 'enableSelectionMode' }, () => {
+                // Close the popup after sending the message
+                window.close();
+              });
             });
           });
 

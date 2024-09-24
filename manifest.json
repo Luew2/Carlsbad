@@ -7,8 +7,14 @@
     "storage",
     "scripting",
     "activeTab",
-    "clipboardWrite"
+    "clipboardWrite",
+    "tabs", 
+    "tabCapture",
+    "offscreen"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "host_permissions": [
     "<all_urls>"
   ],
