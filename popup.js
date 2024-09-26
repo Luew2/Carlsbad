@@ -4,10 +4,11 @@
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(
     () => {
-      alert('Copied to clipboard');
+      console.log('Copied to clipboard');
     },
     (err) => {
       console.error('Could not copy text: ', err);
+      alert('Failed to copy to clipboard.');
     }
   );
 }
@@ -366,6 +367,12 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             });
 
+            // Add click event to component preview to copy HTML and CSS
+            componentPreview.addEventListener('click', () => {
+              const combinedContent = `<!-- Component HTML -->\n${component.html}\n\n/* Component CSS */\n${component.css}`;
+              copyToClipboard(combinedContent);
+            });
+
             // Append elements
             componentWrapper.appendChild(componentPreview);
             componentWrapper.appendChild(deleteButton);
@@ -386,13 +393,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
           function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-              // Optional: Display a success message
-              alert(`Copied: ${text}`);
-            }, () => {
-              // Handle error
-              alert('Failed to copy to clipboard.');
-            });
+            navigator.clipboard.writeText(text).then(
+              () => {
+                console.log('Copied to clipboard');
+                alert('Copied to clipboard.');
+              },
+              (err) => {
+                console.error('Could not copy text: ', err);
+                alert('Failed to copy to clipboard.');
+              }
+            );
           }
 
          // Copy for colors

@@ -14,7 +14,7 @@
       }
     });
 
-    function saveComponentScreenshot(screenshotDataUrl) {
+    function saveComponentData(screenshotDataUrl, componentData) {
       const hostname = window.location.hostname;
     
       chrome.storage.local.get({ componentsByHost: {} }, (data) => {
@@ -24,12 +24,14 @@
         components.push({
           name: 'Selected Component',
           screenshot: screenshotDataUrl,
+          html: componentData.html,
+          css: componentData.css,
         });
     
         componentsByHost[hostname] = components;
     
         chrome.storage.local.set({ componentsByHost }, () => {
-          console.log('Component screenshot saved for hostname:', hostname);
+          console.log('Component data saved for hostname:', hostname);
           displaySuccessMessage();
         });
       });
@@ -62,6 +64,8 @@
       document.body.appendChild(overlay);
     
       document.body.style.cursor = 'crosshair';
+      document.addEventListener('mouseover', handleMouseOver, true);
+      document.addEventListener('click', handleClick, true);
     
       function handleMouseOver(event) {
         event.target.style.outline = '2px solid blue';
@@ -77,30 +81,46 @@
     
         const element = event.target;
         const rect = element.getBoundingClientRect();
-
-        // Capture the screenshot
-        captureComponentScreenshot(rect);
     
-        // Clean up
+        document.body.style.cursor = '';
         event.target.style.outline = '0px solid blue';
-        exitSelectionMode();
+        exitSelectionMode(element, rect);
       }
     
-      function exitSelectionMode() {
+      function exitSelectionMode(element, rect) {
         document.body.style.cursor = '';
         document.removeEventListener('click', handleClick, true);
         document.removeEventListener('mouseover', handleMouseOver, true);
         document.removeEventListener('mouseout', handleMouseOut, true);
-        removeOverlay();
-
+      
+        // Request a new animation frame to ensure the outline is removed before capturing
+        requestAnimationFrame(() => {
+          // Request another frame to ensure the browser has had time to remove the outline
+          requestAnimationFrame(() => {
+            // Process the element to get HTML and CSS
+            extractElementHTMLAndCSS(element)
+              .then(({ html, css }) => {
+                // Capture the component screenshot and save data
+                captureComponentScreenshot(rect, { html, css });
+      
+                // Remove the overlay
+                removeOverlay();
+              })
+              .catch((error) => {
+                console.error('Error extracting element HTML and CSS:', error);
+                // Handle error if necessary
+              });
+          });
+        });
       }
+      
     
       document.addEventListener('click', handleClick, true);
       document.addEventListener('mouseover', handleMouseOver, true);
       document.addEventListener('mouseout', handleMouseOut, true);
     }
     
-    function captureComponentScreenshot(rect) {
+    function captureComponentScreenshot(rect, componentData) {
       console.log('Capturing screenshot of component:', rect);
       removeOverlay();
     
@@ -119,8 +139,8 @@
           (response) => {
             if (response && response.screenshot) {
               console.log('Received screenshot response:', response);
-              // Save the screenshot data for later use
-              saveComponentScreenshot(response.screenshot);
+              // Save the screenshot data along with html and css
+              saveComponentData(response.screenshot, componentData);
             } else {
               console.error('Failed to capture screenshot');
             }
@@ -196,15 +216,180 @@
         html: componentHTML
       });
     }
+
+    function extractElementHTMLAndCSS(element) {
+      return new Promise((resolve, reject) => {
+        const clone = element.cloneNode(true);
+    
+        // Collect class names
+        const classNamesSet = new Set();
+        collectClassNames(clone, classNamesSet);
+    
+        // Serialize HTML
+        const serializer = new XMLSerializer();
+        const componentHTML = serializer.serializeToString(clone);
+    
+        // Extract CSS rules
+        extractCSSForClasses(Array.from(classNamesSet))
+          .then(({ cssText, externalStylesheets }) => {
+            // Include external stylesheet links as comments
+            const stylesheetComments = externalStylesheets
+              .map(href => `<!-- Stylesheet: ${href} -->`)
+              .join('\n');
+    
+            const combinedCSS = `
+            /* External Stylesheets (Uncomment if needed) */
+            ${stylesheetComments}
+            
+            /* Component CSS */
+            ${cssText}
+            `;
+    
+            // Resolve with the component data
+            resolve({
+              html: componentHTML,
+              css: combinedCSS,
+            });
+          })
+          .catch((error) => {
+            console.error('Error extracting CSS for classes:', error);
+            reject(error);
+          });
+      });
+    }
+
+    function extractCSSForClasses(classNames) {
+      let cssText = '';
+      const externalStylesheets = new Set();
+      const fetchPromises = [];
+    
+      for (const sheet of document.styleSheets) {
+        try {
+          // If the stylesheet is from an external source
+          if (sheet.href && new URL(sheet.href).origin !== window.location.origin) {
+            externalStylesheets.add(sheet.href);
+            // Create a promise for fetching the stylesheet content
+            const fetchPromise = fetch(sheet.href)
+              .then(response => {
+                if (response.ok) {
+                  return response.text();
+                } else {
+                  console.warn(`Failed to fetch stylesheet: ${sheet.href}`);
+                  return '';
+                }
+              })
+              .then(cssContent => {
+                cssText += extractCSSFromContent(cssContent, classNames);
+              })
+              .catch(e => {
+                console.warn('Could not access stylesheet:', sheet.href, e);
+              });
+            fetchPromises.push(fetchPromise);
+          } else if (sheet.cssRules) {
+            // For same-origin stylesheets, extract directly
+            cssText += extractCSSFromRules(sheet.cssRules, classNames);
+          }
+        } catch (e) {
+          console.warn('Could not access stylesheet:', sheet.href, e);
+          if (sheet.href) {
+            externalStylesheets.add(sheet.href);
+          }
+        }
+      }
+    
+      return Promise.all(fetchPromises).then(() => {
+        return { cssText, externalStylesheets: Array.from(externalStylesheets) };
+      });
+    }
+    
+    // Function to extract CSS from stylesheet content
+      function extractCSSFromContent(cssContent, classNames) {
+        const ast = csstree.parse(cssContent); // Parse the CSS content into an AST
+        let cssText = '';
+
+        // Traverse the AST to find rules matching classNames
+        csstree.walk(ast, {
+            visit: 'Rule',
+            enter(node) {
+                const selectors = csstree.generate(node.prelude);
+                classNames.forEach(className => {
+                    if (selectors.includes(`.${className}`)) {
+                        cssText += csstree.generate(node) + '\n';
+                    }
+                });
+            }
+        });
+
+        return cssText;
+      }
+
+    
+    
+    // Function to extract CSS from CSSRuleList
+    function extractCSSFromRules(cssRules, classNames) {
+      let cssText = '';
+      for (const rule of cssRules) {
+        if (rule instanceof CSSStyleRule) {
+          for (const className of classNames) {
+            const classSelector = `.${className}`;
+            if (rule.selectorText.includes(classSelector)) {
+              cssText += rule.cssText + '\n';
+              break;
+            }
+          }
+        } else if (rule instanceof CSSImportRule) {
+          // Handle @import rules if necessary
+        } else if (rule instanceof CSSMediaRule) {
+          // Recursively process media rules
+          const mediaCSS = extractCSSFromRules(rule.cssRules, classNames);
+          if (mediaCSS) {
+            cssText += `@media ${rule.media.mediaText} {\n${mediaCSS}}\n`;
+          }
+        }
+        // Handle other types of rules if necessary
+      }
+      return cssText;
+    }
+    
+    // Function to extract CSS from a parsed stylesheet object
+    function extractCSSFromParsedStylesheet(stylesheet, classNames) {
+      let cssText = '';
+      // Implement based on the parsing library's structure
+      // For example, iterate through stylesheet.rules and match selectors
+      return cssText;
+    }
+    
+    // Function to collect class names recursively
+    function collectClassNames(element, classNamesSet) {
+      if (element.classList && element.classList.length > 0) {
+        element.classList.forEach((className) => {
+          classNamesSet.add(className);
+        });
+      }
+      for (const child of element.children) {
+        collectClassNames(child, classNamesSet);
+      }
+    }
+    
     
     function inlineAllStyles(element) {
-      const nodes = element.querySelectorAll('*');
-      nodes.forEach((node) => {
+      const treeWalker = document.createTreeWalker(
+        element,
+        NodeFilter.SHOW_ELEMENT,
+        null,
+        false
+      );
+      do {
+        const node = treeWalker.currentNode;
         const computedStyle = window.getComputedStyle(node);
-        for (const key of computedStyle) {
-          node.style[key] = computedStyle.getPropertyValue(key);
+        let cssText = '';
+        for (let i = 0; i < computedStyle.length; i++) {
+          const prop = computedStyle[i];
+          const value = computedStyle.getPropertyValue(prop);
+          cssText += `${prop}: ${value}; `;
         }
-      });
+        node.setAttribute('style', cssText);
+      } while (treeWalker.nextNode());
     }
   
     function isValidColor(color) {
