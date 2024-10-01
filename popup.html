@@ -1,10 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Design System Extractor</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div id="menu">
+    <button id="menu-button">☰</button>
+    <div id="menu-content" class="hidden">
+      <ul>
+        <li id="export-image-option">Export as Image</li>
+        <li id="export-pdf-option">Export as PDF</li>
+        <li id="export-design-tokens-option">Export Design Tokens (JSON)</li>
+      </ul>
+    </div>
+  </div>
   <div id="header">
     <div id="logo"></div>
     <h1>Design System</h1>
@@ -16,19 +27,22 @@
     <ul id="fonts"></ul>
     <h2>Button Styles</h2>
     <div id="buttons"></div>
-    <h2>Components</h2>
+
+    <!-- Updated Components Section -->
+    <h2 id="components-header">
+      Components
+      <button id="delete-components-button" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M9 3V4H4V6H5V21A1 1 0 0 0 6 22H18A1 1 0 0 0 19 21V6H20V4H15V3H9M7 6H17V20H7V6Z" />
+        </svg>
+      </button>
+    </h2>
     <div id="components"></div>
     <button id="select-component-button">Select Component</button>
-    
-
-    <!-- Export Buttons -->
-    <div id="export-buttons">
-      <button id="export-css-button">Export CSS</button>
-      <button id="export-image-button">Export Image</button>
-    </div>
-
   </div>
 
-  <script src="popup.js"></script>
+  <!-- Include jsPDF library -->
+  <script src="js/libs/jspdf.umd.min.js"></script>
+  <script src="js/popup.js"></script>
 </body>
 </html>

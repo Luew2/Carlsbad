@@ -8,12 +8,12 @@
     "scripting",
     "activeTab",
     "clipboardWrite",
-    "tabs", 
+    "tabs",
     "tabCapture",
     "offscreen"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "js/background.js"
   },
   "host_permissions": [
     "<all_urls>"
@@ -29,8 +29,25 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content_script.js", "csstree.js"],
+      "js": ["js/content_script.js", "js/csstree.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "js/tools/Snapshooter.js",
+        "js/tools/CSSStringifier.js",
+        "js/filters/DefaultValueFilter.js",
+        "js/filters/ShorthandPropertyFilter.js",
+        "js/filters/WebkitPropertiesFilter.js",
+        "js/tools/SameRulesCombiner.js",
+        "js/tools/startExtraction.js"
+      ],
+      "matches": ["<all_urls>"]
     }
   ]
 }

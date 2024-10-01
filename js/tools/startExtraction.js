@@ -6,7 +6,7 @@
         webkitPropertiesFilter = new WebkitPropertiesFilter(),
         defaultValueFilter = new DefaultValueFilter(),
         sameRulesCombiner = new SameRulesCombiner();
-  
+
     // Function to process the snapshot
     function processSnapshot(snapshot) {
         let styles = snapshot.css;
@@ -39,11 +39,18 @@
         cssString = cssString.replace(/:snappysnippet_prefix:/g, '');
 
         // **Remove styles for `:after` and `:before` pseudo-elements using regex**
-        cssString = cssString.replace(/#[^{]*:(after|before)\s*\{[^}]*\}\s*/g, '');
+        // This removes any CSS rules targeting :after or :before pseudo-elements
+        cssString = cssString.replace(/#[^{]*:(after|before)\s*\{[^}]*\}\s*/gi, '');
 
         // **Remove comments following each closing brace `}` in CSS**
-        // This regex targets any `}` followed by optional whitespace and a comment `/* ... */`
+        // This handles both correctly formed comments (/* ... */) and malformed comments (*#...*/)
+        // Replace "}/\* comment */" and "}*#comment*/" with "}"
         cssString = cssString.replace(/}\s*\/\*[^*]*\*\//g, '}');
+        cssString = cssString.replace(/}\s*\*#[^*]*\*\//g, '}');
+
+        // **Remove any remaining standalone comments (optional)**
+        // If you want to ensure no comments remain, you can uncomment the following line:
+        // cssString = cssString.replace(/\/\*[\s\S]*?\*\//g, '');
 
         // Return processed data
         return {
@@ -54,46 +61,46 @@
 
     // Function to start the extraction
     function startSnappySnippetExtraction() {
-      const elementPath = window.selectedElementPath;
-  
-      if (!elementPath) {
-        console.error('SnappySnippet: No element selected.');
-        return;
-      }
-  
-      const root = document.querySelector(elementPath);
-  
-      if (!root) {
-        console.error('SnappySnippet: Selected element not found.');
-        return;
-      }
-  
-      // Extract the snapshot
-    const snapshotJSON = Snapshooter(root);
-    const snapshot = JSON.parse(snapshotJSON); // Parse the JSON string
+        const elementPath = window.selectedElementPath;
 
-    console.log('Parsed snapshot:', snapshot);
+        if (!elementPath) {
+            console.error('SnappySnippet: No element selected.');
+            return;
+        }
 
-      // Process the snapshot
-      const processedData = processSnapshot(snapshot);
-  
-      // Send the data back to the content script
-      window.postMessage(
-        {
-          source: 'snappySnippet',
-          data: processedData,
-        },
-        '*'
-      );
+        const root = document.querySelector(elementPath);
+
+        if (!root) {
+            console.error('SnappySnippet: Selected element not found.');
+            return;
+        }
+
+        // Extract the snapshot
+        const snapshotJSON = Snapshooter(root);
+        const snapshot = JSON.parse(snapshotJSON); // Parse the JSON string
+
+        console.log('Parsed snapshot:', snapshot);
+
+        // Process the snapshot
+        const processedData = processSnapshot(snapshot);
+
+        // Send the data back to the content script
+        window.postMessage(
+            {
+                source: 'snappySnippet',
+                data: processedData,
+            },
+            '*'
+        );
     }
-  
+
     // Listen for the SET_SELECTED_ELEMENT message
     window.addEventListener('message', function (event) {
-      if (event.source !== window) return;
-  
-      if (event.data && event.data.type === 'SET_SELECTED_ELEMENT') {
-        window.selectedElementPath = event.data.selector;
-        startSnappySnippetExtraction();
-      }
+        if (event.source !== window) return;
+
+        if (event.data && event.data.type === 'SET_SELECTED_ELEMENT') {
+            window.selectedElementPath = event.data.selector;
+            startSnappySnippetExtraction();
+        }
     });
-  })();
+})();

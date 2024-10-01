@@ -1,4 +1,5 @@
 // popup.js
+const { jsPDF } = window.jspdf;
 
 // Function definitions can be outside the DOMContentLoaded event
 function copyToClipboard(text) {
@@ -11,6 +12,58 @@ function copyToClipboard(text) {
       alert('Failed to copy to clipboard.');
     }
   );
+}
+
+function exportDesignTokens(colors, fonts, buttons) {
+  const designTokens = {
+    color: {},
+    font: {},
+    button: {},
+  };
+
+  // Process colors
+  colors.forEach((item, index) => {
+    const tokenName = `color${index + 1}`;
+    designTokens.color[tokenName] = {
+      value: item.color,
+      type: 'color',
+    };
+  });
+
+  // Process fonts
+  fonts.forEach((item, index) => {
+    const tokenName = `font${index + 1}`;
+    designTokens.font[tokenName] = {
+      value: item.font,
+      type: 'fontFamily',
+    };
+  });
+
+  // Process buttons
+  buttons.forEach((item, index) => {
+    const tokenName = `button${index + 1}`;
+    designTokens.button[tokenName] = {
+      value: item.styles,
+      type: 'style',
+    };
+  });
+
+  // Convert to JSON and download
+  const jsonContent = JSON.stringify(designTokens, null, 2);
+  downloadJSONFile(jsonContent, 'design-tokens.json');
+}
+
+function downloadJSONFile(content, filename = 'design-tokens.json') {
+  const blob = new Blob([content], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+
+  document.body.appendChild(link);
+  link.click();
+
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
 }
 
 // Function to generate CSS content
@@ -231,60 +284,65 @@ function generateAndExportImage(colors, fonts, buttons) {
   });
 }
 
-// Begin the main script after DOM content is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  const colorsContainer = document.getElementById('colors');
-  const fontsContainer = document.getElementById('fonts');
-  const buttonsContainer = document.getElementById('buttons');
-  const logoImg = document.getElementById('logo');
+  document.addEventListener('DOMContentLoaded', () => {
+    const colorsContainer = document.getElementById('colors');
+    const fontsContainer = document.getElementById('fonts');
+    const buttonsContainer = document.getElementById('buttons');
+    const logoImg = document.getElementById('logo');
+    let colors = [];
+    let fonts = [];
+    let buttons = [];
 
-  // Fetch the current tab to match the URL
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const currentTab = tabs[0];
-    const currentUrl = new URL(currentTab.url || '');
-    const hostname = currentUrl.hostname;
+    // Variables to store selected components
+    let selectedComponents = [];
 
-    // Retrieve data from storage
-    chrome.storage.local.get(['designSystem', 'url', 'componentsByHost'], (data) => {
-      if (data.designSystem && data.url === hostname) {
-        const { colors, fonts, buttons, logoUrl } = data.designSystem;
-        const colorsList = document.getElementById('colors');
-        const fontsList = document.getElementById('fonts');
-        const logoContainer = document.getElementById('logo');
-        const buttonsContainer = document.getElementById('buttons');
-        const componentsContainer = document.getElementById('components');
+    // Fetch the current tab to match the URL
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const currentTab = tabs[0];
+      const currentUrl = new URL(currentTab.url || '');
+      const hostname = currentUrl.hostname;
 
-        // Retrieve components for the current hostname
-        const components = (data.componentsByHost && data.componentsByHost[hostname]) || [];
-        console.log('Components for current hostname:', components);
-        console.log('Data:', data);
-        // Clear any existing content
-        colorsList.innerHTML = '';
-        fontsList.innerHTML = '';
-        logoContainer.innerHTML = '';
-        buttonsContainer.innerHTML = '';
-        componentsContainer.innerHTML = '';
+      // Retrieve data from storage
+      chrome.storage.local.get(['designSystem', 'url', 'componentsByHost'], (data) => {
+        if (data.designSystem && data.url === hostname) {
+          const { colors, fonts, buttons, logoUrl } = data.designSystem;
+          const colorsList = document.getElementById('colors');
+          const fontsList = document.getElementById('fonts');
+          const logoContainer = document.getElementById('logo');
+          const buttonsContainer = document.getElementById('buttons');
+          const componentsContainer = document.getElementById('components');
 
-        // Display logo
-        if (logoUrl) {
-          const img = document.createElement('img');
-          img.src = logoUrl;
-          img.alt = 'Logo';
-          img.width = 32;
-          img.height = 32;
-          logoContainer.appendChild(img);
-        }
+          // Retrieve components for the current hostname
+          const components = (data.componentsByHost && data.componentsByHost[hostname]) || [];
+          console.log('Components for current hostname:', components);
+          console.log('Data:', data);
+          // Clear any existing content
+          colorsList.innerHTML = '';
+          fontsList.innerHTML = '';
+          logoContainer.innerHTML = '';
+          buttonsContainer.innerHTML = '';
+          componentsContainer.innerHTML = '';
 
-        // Display colors inline
-        colors.forEach((item) => {
-          const { color } = item;
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <div class="color-sample" style="background:${color};"></div>
-            <span class="color-code" data-color="${color}">${color}</span>
-          `;
-          colorsList.appendChild(li);
-        });
+          // Display logo
+          if (logoUrl) {
+            const img = document.createElement('img');
+            img.src = logoUrl;
+            img.alt = 'Logo';
+            img.width = 32;
+            img.height = 32;
+            logoContainer.appendChild(img);
+          }
+
+          // Display colors inline
+          colors.forEach((item) => {
+            const { color } = item;
+            const li = document.createElement('li');
+            li.innerHTML = `
+              <div class="color-sample" style="background:${color};"></div>
+              <span class="color-code" data-color="${color}">${color}</span>
+            `;
+            colorsList.appendChild(li);
+          });
 
           // Display fonts inline
           fonts.forEach((item) => {
@@ -319,84 +377,127 @@ document.addEventListener('DOMContentLoaded', () => {
             buttonsContainer.appendChild(buttonWrapper);
           });
 
-          chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-            if (request.action === 'screenshotCaptured') {
-              const { screenshot, name } = request;
-          
-              const componentWrapper = document.createElement('div');
-              componentWrapper.className = 'component-wrapper';
-          
-              const componentName = document.createElement('h3');
-              componentName.textContent = name;
-          
-              const componentPreview = document.createElement('img');
-              componentPreview.className = 'component-preview';
-              componentPreview.src = screenshot;
-          
-              console.log('Received screenshot in popup.js:', screenshot);
-          
-              componentWrapper.appendChild(componentName);
-              componentWrapper.appendChild(componentPreview);
-              componentsContainer.appendChild(componentWrapper);
-            }
-          });
-          
+          // Event listeners for the menu
+          const menuButton = document.getElementById('menu-button');
+          const menuContent = document.getElementById('menu-content');
 
-          // Display components
+          menuButton.addEventListener('click', () => {
+            menuContent.classList.toggle('hidden');
+          });
+
+          // Event listener for Export as Image option
+          document.getElementById('export-image-option').addEventListener('click', () => {
+            generateAndExportImage(colors, fonts, buttons);
+            menuContent.classList.add('hidden');
+          });
+
+          // Event listener for Export as PDF option
+          document.getElementById('export-pdf-option').addEventListener('click', () => {
+            generateAndExportPDF(colors, fonts, buttons);
+            menuContent.classList.add('hidden');
+          });
+
+          // In popup.js, inside DOMContentLoaded event
+          document.getElementById('export-design-tokens-option').addEventListener('click', () => {
+            exportDesignTokens(colors, fonts, buttons);
+            menuContent.classList.add('hidden');
+          });
+
+
+          // Display components (Replace this entire section)
           components.forEach((component, index) => {
             const componentWrapper = document.createElement('div');
             componentWrapper.className = 'component-wrapper';
 
+            // Create the checkbox in the top-right corner of each component
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'component-checkbox';
+            checkbox.dataset.index = index; // Store the index for identification
+            checkbox.addEventListener('change', (e) => {
+              const idx = parseInt(e.target.dataset.index);
+              if (e.target.checked) {
+                selectedComponents.push(idx);
+              } else {
+                selectedComponents = selectedComponents.filter((i) => i !== idx);
+              }
+              // Enable or disable the delete button based on selection
+              toggleDeleteButton();
+            });
+            componentWrapper.appendChild(checkbox);
+
+            // Component preview image
             const componentPreview = document.createElement('img');
             componentPreview.className = 'component-preview';
             componentPreview.src = component.screenshot;
+            componentWrapper.appendChild(componentPreview);
 
-            // Create the delete button
-            const deleteButton = document.createElement('button');
-            deleteButton.className = 'delete-button';
-            deleteButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M9 3V4H4V6H5V21A1 1 0 0 0 6 22H18A1 1 0 0 0 19 21V6H20V4H15V3H9M7 6H17V20H7V6Z" />
-            </svg>`;
-            deleteButton.addEventListener('click', () => {
-              // Confirm deletion (optional)
-              if (confirm('Are you sure you want to delete this component?')) {
-                // Remove the component from storage
-                removeComponent(index, hostname);
-                // Remove the component from the UI
-                componentWrapper.remove();
-              }
-            });
+            // Append the component wrapper to the container
+            componentsContainer.appendChild(componentWrapper);
 
-            // Add click event to component preview to copy HTML and CSS
+            // Click event to copy component HTML and CSS
             componentPreview.addEventListener('click', () => {
               const combinedContent = `<!-- Component HTML -->\n${component.html}\n\n/* Component CSS */\n${component.css}`;
               copyToClipboard(combinedContent);
+              alert('Component HTML and CSS copied to clipboard.');
             });
-
-            // Append elements
-            componentWrapper.appendChild(componentPreview);
-            componentWrapper.appendChild(deleteButton);
-            componentsContainer.appendChild(componentWrapper);
           });
 
-          function removeComponent(index, hostname) {
+          // Function to toggle the delete button
+          function toggleDeleteButton() {
+            const deleteButton = document.getElementById('delete-components-button');
+            if (selectedComponents.length > 0) {
+              deleteButton.disabled = false;
+            } else {
+              deleteButton.disabled = true;
+            }
+          }
+
+          // Event listener for the delete button in the header
+          document.getElementById('delete-components-button').addEventListener('click', () => {
+            if (confirm('Are you sure you want to delete the selected components?')) {
+              removeSelectedComponents(selectedComponents, hostname);
+              // Refresh the components display
+              window.location.reload(); // Simple way to refresh the UI
+            }
+          });
+
+          // Function to remove selected components
+          function removeSelectedComponents(indices, hostname) {
             chrome.storage.local.get({ componentsByHost: {} }, (data) => {
               const componentsByHost = data.componentsByHost;
               if (componentsByHost[hostname]) {
-                componentsByHost[hostname].splice(index, 1);
+                // Remove components with indices in 'indices' array
+                componentsByHost[hostname] = componentsByHost[hostname].filter(
+                  (component, idx) => !indices.includes(idx)
+                );
                 chrome.storage.local.set({ componentsByHost }, () => {
-                  console.log(`Component at index ${index} removed for hostname ${hostname}`);
+                  console.log(`Components at indices ${indices} removed for hostname ${hostname}`);
                 });
               }
             });
           }
 
+          // Function to generate and export PDF (requires jsPDF library)
+          function generateAndExportPDF(colors, fonts, buttons) {
+            // Include jsPDF library in your extension's manifest and directory
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            drawDesignPreview(ctx, canvas, colors, fonts, buttons, () => {
+              const imageData = canvas.toDataURL('image/jpeg', 1.0);
+
+              const pdf = new jsPDF('p', 'pt', [canvas.width, canvas.height]);
+              pdf.addImage(imageData, 'JPEG', 0, 0, canvas.width, canvas.height);
+              pdf.save('design-preview.pdf');
+            });
+          }
 
           function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(
               () => {
                 console.log('Copied to clipboard');
-                alert('Copied to clipboard.');
+                // alert('Copied to clipboard.');
               },
               (err) => {
                 console.error('Could not copy text: ', err);
@@ -405,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
           }
 
-         // Copy for colors
+          // Copy for colors
           document.querySelectorAll('.color-code').forEach((elem) => {
             elem.addEventListener('click', () => {
               const color = elem.dataset.color;
@@ -429,14 +530,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           });
 
-          // Copy component HTML
-          document.querySelectorAll('.copy-html-btn').forEach((btn) => {
-            btn.addEventListener('click', () => {
-              const html = btn.dataset.html;
-              copyToClipboard(html);
-            });
-          });
-
           document.getElementById('select-component-button').addEventListener('click', () => {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
               chrome.tabs.sendMessage(tabs[0].id, { action: 'enableSelectionMode' }, () => {
@@ -446,39 +539,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           });
 
-          // Event listener for the Export CSS button
-          document
-            .getElementById('export-css-button')
-            .addEventListener('click', () => {
-              const cssContent = generateCSSFileContent({
-                colors,
-                fonts,
-                buttons,
-              });
-              downloadCSSFile(cssContent);
-            });
-
-          // Event listener for the Export Image button
-          document
-            .getElementById('export-image-button')
-            .addEventListener('click', () => {
-              generateAndExportImage(colors, fonts, buttons);
-            });
-
-        // Generate design preview when data is available
-        // (Only if you want to display it; since you mentioned not displaying the canvas,
-        //  you might skip this step. If drawing the canvas causes errors due to missing data,
-        //  ensure it's called at the right time.)
-
-        // If you don't want to display the canvas in the popup, you can comment out this line:
-        // drawDesignPreview(ctx, canvas, colors, fonts, buttons);
-
-      } else {
-        // Data not available yet
-        const content = document.getElementById('content');
-        content.innerHTML =
-          '<p>No data available. Please refresh the page and try again.</p>';
-      }
+        } else {
+          // Data not available yet
+          const content = document.getElementById('content');
+          content.innerHTML =
+            '<p>No data available. Please refresh the page and try again.</p>';
+        }
+      });
     });
   });
-});

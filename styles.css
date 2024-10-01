@@ -1,140 +1,160 @@
 /* styles.css */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    width: 320px;
-    padding: 10px;
-    margin: 0;
-    background-color: #f5f5f5;
-  }
-  
-  #header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-  
-  #logo img {
-    width: 32px;
-    height: 32px;
-    margin-right: 10px;
-  }
-  
-  h1 {
-    font-size: 20px;
-    margin: 0;
-  }
-  
-  h2 {
-    font-size: 16px;
-    margin-top: 15px;
-    margin-bottom: 5px;
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 5px;
-  }
-  
-  #content ul {
-    list-style-type: none;
-    padding: 0;
-  }
-  
-  #content li {
-    margin: 5px 0;
-    display: flex;
-    align-items: center;
-  }
-  
-  .color-sample {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    vertical-align: middle;
-    margin-right: 10px;
-    border: 1px solid #ccc;
-  }
-  
-  .color-code {
-    cursor: pointer;
-    color: #007BFF;
-  }
-  
-  .copy-btn, .copy-css-btn {
-    margin-left: 10px;
-    padding: 2px 5px;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  
-  .copy-btn:hover, .color-code:hover, .copy-css-btn:hover {
-    text-decoration: underline;
-  }
-  
-  .font-sample {
-    font-size: 14px;
-    cursor: pointer;
-  }
-  
-  #buttons {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .button-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    max-width: 150px; /* Set max width as desired */
-    min-width: 150px;
-  }
-  
-  .button-container {
-    flex: 1;
-    max-width: 150px; /* Set the maximum width for buttons */
-  }
-  
-  .extracted-button {
-    width: 100%;
-    max-width: 100%;
-    min-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer;
-  }
-  
-  .copy-css-btn {
-    margin-left: 10px;
-    padding: 5px 10px;
-    flex-shrink: 0;
-  }
-  
-  .font-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 5px;
-    margin-bottom: 5px;
-  }
-  
-  .font-sample {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .copy-font-btn {
-    margin-left: 10px;
-    padding: 2px 5px;
-    flex-shrink: 0;
-  }
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 320px;
+  padding: 10px;
+  margin: 0;
+  background-color: #f5f5f5;
+}
 
-/* Existing styles for .component-wrapper and .component-preview */
-.component-wrapper {
-  position: relative; /* To position delete button within this container */
+#header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+#logo img {
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+h2 {
+  font-size: 16px;
+  margin-top: 15px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+  position: relative; /* To position elements inside h2 */
+}
+
+#components-header {
+  display: flex;
+  align-items: center;
+}
+
+#delete-components-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: auto;
+  padding: 0;
+}
+
+#delete-components-button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#content ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+#content li {
+  margin: 5px 0;
+  display: flex;
+  align-items: center;
+}
+
+.color-sample {
   display: inline-block;
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  margin-right: 10px;
+  border: 1px solid #ccc;
+}
+
+.color-code {
+  cursor: pointer;
+  color: #007BFF;
+}
+
+.copy-btn, .copy-css-btn {
+  margin-left: 10px;
+  padding: 2px 5px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.copy-btn:hover, .color-code:hover, .copy-css-btn:hover {
+  text-decoration: underline;
+}
+
+.font-sample {
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.button-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  max-width: 150px; /* Set max width as desired */
+  min-width: 150px;
+}
+
+.button-container {
+  flex: 1;
+  max-width: 150px; /* Set the maximum width for buttons */
+}
+
+.extracted-button {
+  width: 100%;
+  max-width: 100%;
+  min-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.copy-css-btn {
+  margin-left: 10px;
+  padding: 5px 10px;
+  flex-shrink: 0;
+}
+
+.font-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.font-sample {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copy-font-btn {
+  margin-left: 10px;
+  padding: 2px 5px;
+  flex-shrink: 0;
+}
+
+/* Component styles */
+.component-wrapper {
+  position: relative;
   margin-bottom: 20px;
+  border: 1px solid #ccc;
+  padding: 10px;
 }
 
 .component-preview {
@@ -145,42 +165,53 @@ body {
   background-color: #fff;
 }
 
-/* Styles for the delete button */
-.delete-button {
+/* Component checkbox */
+.component-checkbox {
   position: absolute;
   top: 5px;
   right: 5px;
-  background: transparent;
-  border: none;
-  font-size: 18px;
   cursor: pointer;
+}
+
+/* Hamburger menu styles */
+#menu {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+#menu-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+#menu-content {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+
+#menu-content.hidden {
+  display: none;
+}
+
+#menu-content ul {
+  list-style: none;
+  margin: 0;
   padding: 0;
-  line-height: 1;
 }
 
-.delete-button:hover {
-  color: red; /* Change color on hover to indicate action */
-}
-
-/* Export Buttons */
-#export-buttons {
-  display: flex;
-  justify-content: space-between; /* Place buttons at the far ends */
-  align-items: center;            /* Center align vertically */
-  margin-top: 10px;               /* Add some space above */
-}
-
-#export-buttons button {
-  flex: 1;                        /* Buttons take equal space */
+#menu-content li {
   padding: 10px;
-  font-size: 14px;
-  margin: 0 5px;                  /* Space between buttons */
+  cursor: pointer;
 }
 
-#export-buttons button:first-child {
-  margin-left: 0;                 /* Remove left margin for first button */
-}
-
-#export-buttons button:last-child {
-  margin-right: 0;                /* Remove right margin for last button */
+#menu-content li:hover {
+  background-color: #f0f0f0;
 }
