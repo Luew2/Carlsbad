@@ -1,0 +1,26 @@
+{
+  "name": "figma_extension",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "babel src --out-dir lib && esbuild lib/code.js --bundle --outfile=dist/code.js --platform=node --external:canvas && cp src/ui.html dist/ui.html && cp lib/ui.js dist/ui.js",
+    "watch": "babel src --out-dir lib --watch"
+  },
+
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "color": "^4.2.3",
+    "css": "^3.0.0",
+    "dom-serializer": "^2.0.0",
+    "htmlparser2": "^9.1.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.25.7",
+    "@babel/core": "^7.25.7",
+    "@babel/preset-env": "^7.25.7",
+    "esbuild": "^0.24.0"
+  }
+}

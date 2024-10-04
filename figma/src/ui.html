@@ -1,0 +1,64 @@
+<!-- ui.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Design System Importer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 16px;
+      width: 300px;
+    }
+    #file-input {
+      margin-bottom: 8px;
+    }
+    #import-button {
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Import Design System</h2>
+  <input type="file" id="file-input" accept=".json" />
+  <br />
+  <button id="import-button">Import</button>
+
+  <!-- Include your UI code directly here -->
+  <script>
+    // Log when the UI is loaded
+    console.log('UI loaded');
+
+    // Handle the import button click
+    document.getElementById('import-button').onclick = () => {
+      console.log('Import button clicked');
+      const fileInput = document.getElementById('file-input');
+      if (fileInput.files.length === 0) {
+        alert('Please select a design system JSON file.');
+        return;
+      }
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const designData = JSON.parse(event.target.result);
+          // Send the data to the main plugin code
+          parent.postMessage({ pluginMessage: { type: 'import-design', designData } }, '*');
+          console.log('Design data sent to plugin:', designData);
+        } catch (error) {
+          alert('Failed to parse the JSON file. Please check the file format.');
+          console.error('JSON parsing error:', error);
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    // Optional: Receive messages from the main plugin code
+    window.onmessage = (event) => {
+      const { pluginMessage } = event.data;
+      console.log('Message received from plugin code:', pluginMessage);
+    };
+  </script>
+</body>
+</html>

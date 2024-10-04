@@ -20,9 +20,14 @@
       chrome.storage.local.get({ componentsByHost: {} }, (data) => {
         const componentsByHost = data.componentsByHost;
         const components = componentsByHost[hostname] || [];
-    
+        // Determine the new component index based on the current number of components
+        const componentIndex = components.length + 1;
+
+        // Create the new component name
+        const newComponentName = `${hostname} #${componentIndex}`;
+        
         const newComponent = {
-          name: 'Selected Component',
+          name: newComponentName,
           html: componentData.html,
           css: componentData.css,
           screenshot: screenshotData,

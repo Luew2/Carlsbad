@@ -1,7 +1,10 @@
 // popup.js
 const { jsPDF } = window.jspdf;
 
-// Function definitions can be outside the DOMContentLoaded event
+let colors = [];
+let fonts = [];
+let buttons = [];
+
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(
     () => {
@@ -20,7 +23,7 @@ function exportDesignTokens(colors, fonts, buttons) {
     font: {},
     button: {},
   };
-
+  
   // Process colors
   colors.forEach((item, index) => {
     const tokenName = `color${index + 1}`;
@@ -284,14 +287,44 @@ function generateAndExportImage(colors, fonts, buttons) {
   });
 }
 
+function exportComponents() {
+  // Fetch components from storage
+  chrome.storage.local.get(['componentsByHost', 'url'], (data) => {
+    const hostname = data.url;
+    const components = (data.componentsByHost && data.componentsByHost[hostname]) || [];
+
+    if (components.length === 0) {
+      alert('No components available to export.');
+      return;
+    }
+  
+      // Prepare the components data
+      const exportedComponents = components.map((component, index) => {
+        return {
+          name: component.name || `Component ${index + 1}`,
+          html: component.html,
+          css: component.css,
+          // screenshot: component.screenshot, // Optional: Include if needed
+        };
+      });
+  
+      // Create the design data object
+      const designData = {
+        components: exportedComponents,
+      };
+  
+      // Convert to JSON and download
+      const jsonContent = JSON.stringify(designData, null, 2);
+      downloadJSONFile(jsonContent, 'design-system-with-components.json');
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const colorsContainer = document.getElementById('colors');
     const fontsContainer = document.getElementById('fonts');
     const buttonsContainer = document.getElementById('buttons');
     const logoImg = document.getElementById('logo');
-    let colors = [];
-    let fonts = [];
-    let buttons = [];
+
 
     // Variables to store selected components
     let selectedComponents = [];
@@ -397,7 +430,13 @@ function generateAndExportImage(colors, fonts, buttons) {
             menuContent.classList.add('hidden');
           });
 
-          // In popup.js, inside DOMContentLoaded event
+          // Event listener for Export Components option
+          document.getElementById('export-components-option').addEventListener('click', () => {
+            exportComponents();
+            menuContent.classList.add('hidden');
+          });
+
+          // design tokens event listener
           document.getElementById('export-design-tokens-option').addEventListener('click', () => {
             exportDesignTokens(colors, fonts, buttons);
             menuContent.classList.add('hidden');
@@ -491,19 +530,6 @@ function generateAndExportImage(colors, fonts, buttons) {
               pdf.addImage(imageData, 'JPEG', 0, 0, canvas.width, canvas.height);
               pdf.save('design-preview.pdf');
             });
-          }
-
-          function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(
-              () => {
-                console.log('Copied to clipboard');
-                // alert('Copied to clipboard.');
-              },
-              (err) => {
-                console.error('Could not copy text: ', err);
-                alert('Failed to copy to clipboard.');
-              }
-            );
           }
 
           // Copy for colors
