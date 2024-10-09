@@ -15,7 +15,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
 // Required dependencies
 var htmlparser2 = require('htmlparser2');
 var css = require('css');
-var domSerializer = require('dom-serializer');
+var domSerializer = require('dom-serializer')["default"];
 var Color = require('color');
 var _require = require('domhandler'),
   Element = _require.Element,
@@ -28,7 +28,7 @@ function createFigmaComponentFromData(_x) {
 } // CSS parsing
 function _createFigmaComponentFromData() {
   _createFigmaComponentFromData = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(componentData) {
-    var html, cssText, name, cssStyles, dom, frame, _iterator8, _step8, childNode;
+    var html, cssText, name, cssStyles, dom, frame, _iterator9, _step9, childNode;
     return _regeneratorRuntime().wrap(function _callee2$(_context2) {
       while (1) switch (_context2.prev = _context2.next) {
         case 0:
@@ -42,15 +42,15 @@ function _createFigmaComponentFromData() {
             _context2.next = 24;
             break;
           }
-          _iterator8 = _createForOfIteratorHelper(dom.children);
+          _iterator9 = _createForOfIteratorHelper(dom.children);
           _context2.prev = 8;
-          _iterator8.s();
+          _iterator9.s();
         case 10:
-          if ((_step8 = _iterator8.n()).done) {
+          if ((_step9 = _iterator9.n()).done) {
             _context2.next = 16;
             break;
           }
-          childNode = _step8.value;
+          childNode = _step9.value;
           _context2.next = 14;
           return processDomNode(childNode, frame, cssStyles);
         case 14:
@@ -62,10 +62,10 @@ function _createFigmaComponentFromData() {
         case 18:
           _context2.prev = 18;
           _context2.t0 = _context2["catch"](8);
-          _iterator8.e(_context2.t0);
+          _iterator9.e(_context2.t0);
         case 21:
           _context2.prev = 21;
-          _iterator8.f();
+          _iterator9.f();
           return _context2.finish(21);
         case 24:
           figma.currentPage.appendChild(frame);
@@ -172,8 +172,8 @@ function _processDomNode() {
       nodeStyles,
       tagName,
       combinedStyles,
-      _iterator9,
-      _step9,
+      _iterator10,
+      _step10,
       childNode,
       textContent,
       _combinedStyles,
@@ -194,122 +194,125 @@ function _processDomNode() {
           console.log("".concat(indent, "DOM node type:"), domNode.type);
           nodeStyles = {};
           if (!(domNode.type === 'tag')) {
-            _context3.next = 58;
+            _context3.next = 60;
             break;
           }
           tagName = domNode.name ? domNode.name.toLowerCase() : '';
           console.log("".concat(indent, "Tag name: ").concat(tagName));
           if (!(tagName === 'svg')) {
-            _context3.next = 15;
+            _context3.next = 17;
             break;
           }
-          figmaNode = handleSVGElement(domNode);
-          _context3.next = 22;
-          break;
-        case 15:
-          if (!(tagName === 'img')) {
-            _context3.next = 21;
-            break;
-          }
-          _context3.next = 18;
-          return handleImageNode(domNode);
-        case 18:
+          _context3.next = 14;
+          return handleSVGElement(domNode, cssStyles);
+        case 14:
           figmaNode = _context3.sent;
-          _context3.next = 22;
+          _context3.next = 24;
           break;
-        case 21:
+        case 17:
+          if (!(tagName === 'img')) {
+            _context3.next = 23;
+            break;
+          }
+          _context3.next = 20;
+          return handleImageNode(domNode);
+        case 20:
+          figmaNode = _context3.sent;
+          _context3.next = 24;
+          break;
+        case 23:
           figmaNode = createFigmaNodeForHTML(tagName);
-        case 22:
+        case 24:
           nodeStyles = getNodeStyles(domNode, cssStyles);
           console.log("".concat(indent, "Node styles:"), nodeStyles);
           if (!figmaNode) {
-            _context3.next = 56;
+            _context3.next = 58;
             break;
           }
           combinedStyles = _objectSpread(_objectSpread({}, parentStyles), nodeStyles);
           if (!(figmaNode.type === 'TEXT')) {
-            _context3.next = 33;
+            _context3.next = 35;
             break;
           }
-          _context3.next = 29;
-          return setTextNodeContent(figmaNode, domNode, combinedStyles);
-        case 29:
           _context3.next = 31;
-          return applyTextStyles(figmaNode, combinedStyles);
+          return setTextNodeContent(figmaNode, domNode, combinedStyles);
         case 31:
-          _context3.next = 56;
-          break;
+          _context3.next = 33;
+          return applyTextStyles(figmaNode, combinedStyles);
         case 33:
-          _context3.next = 35;
-          return applyStylesToFigmaNode(figmaNode, combinedStyles);
+          _context3.next = 58;
+          break;
         case 35:
+          _context3.next = 37;
+          return applyStylesToFigmaNode(figmaNode, combinedStyles);
+        case 37:
           applyAutoLayoutStyles(figmaNode, combinedStyles);
           if (!(figmaNode.type === 'FRAME')) {
-            _context3.next = 56;
+            _context3.next = 58;
             break;
           }
           if (!(domNode.children && domNode.children.length > 0)) {
-            _context3.next = 56;
+            _context3.next = 58;
             break;
           }
           console.log("".concat(indent, "Processing ").concat(domNode.children.length, " children of Frame node at depth ").concat(depth));
-          _iterator9 = _createForOfIteratorHelper(domNode.children);
-          _context3.prev = 40;
-          _iterator9.s();
-        case 42:
-          if ((_step9 = _iterator9.n()).done) {
-            _context3.next = 48;
+          _iterator10 = _createForOfIteratorHelper(domNode.children);
+          _context3.prev = 42;
+          _iterator10.s();
+        case 44:
+          if ((_step10 = _iterator10.n()).done) {
+            _context3.next = 50;
             break;
           }
-          childNode = _step9.value;
-          _context3.next = 46;
+          childNode = _step10.value;
+          _context3.next = 48;
           return processDomNode(childNode, figmaNode, cssStyles, nodeStyles, depth + 1);
-        case 46:
-          _context3.next = 42;
-          break;
         case 48:
-          _context3.next = 53;
+          _context3.next = 44;
           break;
         case 50:
-          _context3.prev = 50;
-          _context3.t0 = _context3["catch"](40);
-          _iterator9.e(_context3.t0);
-        case 53:
-          _context3.prev = 53;
-          _iterator9.f();
-          return _context3.finish(53);
-        case 56:
-          _context3.next = 69;
+          _context3.next = 55;
           break;
+        case 52:
+          _context3.prev = 52;
+          _context3.t0 = _context3["catch"](42);
+          _iterator10.e(_context3.t0);
+        case 55:
+          _context3.prev = 55;
+          _iterator10.f();
+          return _context3.finish(55);
         case 58:
+          _context3.next = 71;
+          break;
+        case 60:
           if (!(domNode.type === 'text')) {
-            _context3.next = 69;
+            _context3.next = 71;
             break;
           }
           textContent = domNode.data.trim();
           console.log("".concat(indent, "Text content: \"").concat(textContent, "\""));
           if (!textContent) {
-            _context3.next = 69;
+            _context3.next = 71;
             break;
           }
           figmaNode = figma.createText();
           console.log("".concat(indent, "Created Text node for text content"));
           _combinedStyles = _objectSpread({}, parentStyles);
-          _context3.next = 67;
-          return setTextNodeContent(figmaNode, domNode, _combinedStyles);
-        case 67:
           _context3.next = 69;
-          return applyTextStyles(figmaNode, _combinedStyles);
+          return setTextNodeContent(figmaNode, domNode, _combinedStyles);
         case 69:
+          _context3.next = 71;
+          return applyTextStyles(figmaNode, _combinedStyles);
+        case 71:
           if (figmaNode) {
             parentFigmaNode.appendChild(figmaNode);
             console.log("".concat(indent, "Appended node: ").concat(figmaNode.name, " to parent: ").concat(parentFigmaNode.name));
           }
-        case 70:
+        case 72:
         case "end":
           return _context3.stop();
       }
-    }, _callee3, null, [[40, 50, 53, 56]]);
+    }, _callee3, null, [[42, 52, 55, 58]]);
   }));
   return _processDomNode.apply(this, arguments);
 }
@@ -361,10 +364,12 @@ function parseTransform(transform) {
   if (matrixMatch) {
     var values = matrixMatch[1].split(',').map(parseFloat);
     if (values.length >= 6) {
-      return [[values[0], values[1], 0], [values[2], values[3], 0], [values[4], values[5], 1]];
+      return [[values[0], values[2], values[4]],
+      // Note the positions of the indices
+      [values[1], values[3], values[5]]];
     }
   }
-  return [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  return [[1, 0, 0], [0, 1, 0]];
 }
 function parseNumericValue(value) {
   if (!value) return undefined;
@@ -402,27 +407,89 @@ function getTextContent(domNode) {
   }
   return text.trim();
 }
-function handleSVGElement(domNode) {
-  try {
-    var svgString = domSerializer(domNode, {
-      xmlMode: true
-    });
-    var svgNode = figma.createNodeFromSvg(svgString);
-    console.log("Created SVG node: ".concat(svgNode.name));
-    return svgNode;
-  } catch (error) {
-    console.error('Error creating SVG node:', error);
-    return null;
+
+// function handleSVGElement(domNode) {
+//   try {
+//     console.log(`Handling SVG element: ${domNode.name}`);
+//     const svgString = domSerializer(domNode, { xmlMode: true });
+//     console.log(`SVG string: ${svgString}`);
+//     const svgNode = figma.createNodeFromSvg(svgString);
+//     console.log(`Created SVG node: ${svgNode.name}`);
+//     return svgNode;
+//   } catch (error) {
+//     console.error('Error creating SVG node:', error);
+//     return null;
+//   }
+// }
+function handleSVGElement(_x5, _x6) {
+  return _handleSVGElement.apply(this, arguments);
+}
+function _handleSVGElement() {
+  _handleSVGElement = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(domNode, cssStyles) {
+    var svgString, svgNode, nodeStyles, fillColor;
+    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+      while (1) switch (_context4.prev = _context4.next) {
+        case 0:
+          _context4.prev = 0;
+          console.log("Handling SVG element: ".concat(domNode.name));
+          svgString = domSerializer(domNode, {
+            xmlMode: true
+          });
+          console.log("Serialized SVG string: ".concat(svgString));
+          svgNode = figma.createNodeFromSvg(svgString);
+          console.log("Created SVG node: ".concat(svgNode.name));
+
+          // Get the fill color from the styles
+          nodeStyles = getNodeStyles(domNode, cssStyles);
+          if (nodeStyles && nodeStyles['fill']) {
+            fillColor = cssColorToFigmaRGB(nodeStyles['fill']);
+            applyFillToVectorNodes(svgNode, fillColor);
+          }
+          return _context4.abrupt("return", svgNode);
+        case 11:
+          _context4.prev = 11;
+          _context4.t0 = _context4["catch"](0);
+          console.error('Error creating SVG node:', _context4.t0);
+          return _context4.abrupt("return", null);
+        case 15:
+        case "end":
+          return _context4.stop();
+      }
+    }, _callee4, null, [[0, 11]]);
+  }));
+  return _handleSVGElement.apply(this, arguments);
+}
+function applyFillToVectorNodes(node, fillColor) {
+  if ('fills' in node && node.type === 'VECTOR') {
+    node.fills = [{
+      type: 'SOLID',
+      color: fillColor
+    }];
+    console.log("Set fill color of vector node ".concat(node.name, " to"), fillColor);
+  }
+  if ('children' in node && node.children.length > 0) {
+    var _iterator5 = _createForOfIteratorHelper(node.children),
+      _step5;
+    try {
+      for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+        var child = _step5.value;
+        applyFillToVectorNodes(child, fillColor);
+      }
+    } catch (err) {
+      _iterator5.e(err);
+    } finally {
+      _iterator5.f();
+    }
   }
 }
-function setTextNodeContent(_x5, _x6, _x7) {
+function setTextNodeContent(_x7, _x8, _x9) {
   return _setTextNodeContent.apply(this, arguments);
 }
 function _setTextNodeContent() {
-  _setTextNodeContent = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(textNode, domNode, styles) {
+  _setTextNodeContent = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(textNode, domNode, styles) {
     var fontFamily, fontStyle, fontName, textContent;
-    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-      while (1) switch (_context4.prev = _context4.next) {
+    return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+      while (1) switch (_context5.prev = _context5.next) {
         case 0:
           fontFamily = styles['font-family'] || 'Roboto';
           fontStyle = styles['font-style'] || 'Regular';
@@ -431,18 +498,18 @@ function _setTextNodeContent() {
             style: fontStyle
           };
           console.log("Loading font: ".concat(fontName.family, " ").concat(fontName.style));
-          _context4.prev = 4;
-          _context4.next = 7;
+          _context5.prev = 4;
+          _context5.next = 7;
           return figma.loadFontAsync(fontName);
         case 7:
           textNode.fontName = fontName;
           console.log("Set font family:", textNode.fontName);
-          _context4.next = 15;
+          _context5.next = 15;
           break;
         case 11:
-          _context4.prev = 11;
-          _context4.t0 = _context4["catch"](4);
-          console.error("Failed to load font: ".concat(fontName.family, " ").concat(fontName.style), _context4.t0);
+          _context5.prev = 11;
+          _context5.t0 = _context5["catch"](4);
+          console.error("Failed to load font: ".concat(fontName.family, " ").concat(fontName.style), _context5.t0);
           textNode.fontName = {
             family: 'Roboto',
             style: 'Regular'
@@ -453,9 +520,9 @@ function _setTextNodeContent() {
           console.log("Set text characters: \"".concat(textNode.characters, "\""));
         case 18:
         case "end":
-          return _context4.stop();
+          return _context5.stop();
       }
-    }, _callee4, null, [[4, 11]]);
+    }, _callee5, null, [[4, 11]]);
   }));
   return _setTextNodeContent.apply(this, arguments);
 }
@@ -510,26 +577,28 @@ function mapAlignItems(value) {
   return map[value] || 'MIN';
 }
 function getNodeStyles(domNode, cssStyles) {
+  console.log("Fetching styles for node: ".concat(domNode.name));
+  console.log("CSS Styles:", cssStyles);
   var styles = {};
   var selectors = getSelectorsForNode(domNode);
   console.log("Fetching styles for node: ".concat(domNode.name, ", Selectors:"), selectors);
   var sortedSelectors = selectors.sort(function (a, b) {
     return getSpecificity(a) - getSpecificity(b);
   });
-  var _iterator5 = _createForOfIteratorHelper(sortedSelectors),
-    _step5;
+  var _iterator6 = _createForOfIteratorHelper(sortedSelectors),
+    _step6;
   try {
-    for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-      var selector = _step5.value;
+    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+      var selector = _step6.value;
       if (cssStyles[selector]) {
         Object.assign(styles, cssStyles[selector]);
         console.log("Applied styles from selector: ".concat(selector), cssStyles[selector]);
       }
     }
   } catch (err) {
-    _iterator5.e(err);
+    _iterator6.e(err);
   } finally {
-    _iterator5.f();
+    _iterator6.f();
   }
   return styles;
 }
@@ -538,17 +607,17 @@ function getSpecificity(selector) {
     b = 0,
     c = 0;
   var parts = selector.split(/(?=[#\.])/);
-  var _iterator6 = _createForOfIteratorHelper(parts),
-    _step6;
+  var _iterator7 = _createForOfIteratorHelper(parts),
+    _step7;
   try {
-    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-      var part = _step6.value;
+    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+      var part = _step7.value;
       if (part.startsWith('#')) a += 1;else if (part.startsWith('.')) b += 1;else c += 1;
     }
   } catch (err) {
-    _iterator6.e(err);
+    _iterator7.e(err);
   } finally {
-    _iterator6.f();
+    _iterator7.f();
   }
   return a * 100 + b * 10 + c;
 }
@@ -562,62 +631,103 @@ function getSelectorsForNode(domNode) {
     selectors.push("#".concat(id));
     if (tagName) selectors.push("".concat(tagName, "#").concat(id));
   }
-  var _iterator7 = _createForOfIteratorHelper(classList),
-    _step7;
+  var _iterator8 = _createForOfIteratorHelper(classList),
+    _step8;
   try {
-    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-      var className = _step7.value;
+    for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+      var className = _step8.value;
       selectors.push(".".concat(className));
       if (tagName) selectors.push("".concat(tagName, ".").concat(className));
     }
   } catch (err) {
-    _iterator7.e(err);
+    _iterator8.e(err);
   } finally {
-    _iterator7.f();
+    _iterator8.f();
   }
   return selectors;
 }
-function applyStylesToFigmaNode(_x8, _x9) {
+function applyStylesToFigmaNode(_x10, _x11) {
   return _applyStylesToFigmaNode.apply(this, arguments);
 }
 function _applyStylesToFigmaNode() {
-  _applyStylesToFigmaNode = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(node, styles) {
-    return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-      while (1) switch (_context5.prev = _context5.next) {
+  _applyStylesToFigmaNode = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6(node, styles) {
+    return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+      while (1) switch (_context6.prev = _context6.next) {
         case 0:
           console.log("Applying styles to node: ".concat(node.name), styles);
-          try {
-            if (node.type === 'FRAME') {
-              applyBackgroundStyles(node, styles);
-              applyGeometryStyles(node, styles);
-              applyPaddingStyles(node, styles);
-              applyMarginStyles(node, styles);
-              applyAutoLayoutStyles(node, styles);
-              applyBorderStyles(node, styles);
-              applyTransformStyles(node, styles);
-              applyOpacityStyles(node, styles);
-            } else if (node.type === 'TEXT') {
-              applyBorderStyles(node, styles);
-              applyOpacityStyles(node, styles);
-              // Text-specific styles are handled separately
-            } else {
-              // Apply general styles for other node types if necessary
-              applyBackgroundStyles(node, styles);
-              applyGeometryStyles(node, styles);
-              applyBorderStyles(node, styles);
-              applyTransformStyles(node, styles);
-              applyOpacityStyles(node, styles);
-            }
-          } catch (error) {
-            console.error("Error applying styles to node: ".concat(node.name), error);
+          _context6.prev = 1;
+          // Common styles for all node types
+          applyOpacityStyles(node, styles);
+          applyTransformStyles(node, styles);
+          if (!(node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'COMPONENT')) {
+            _context6.next = 13;
+            break;
           }
-        case 2:
+          // Apply container-specific styles
+          applyBackgroundStyles(node, styles);
+          applyGeometryStyles(node, styles);
+          applyPaddingStyles(node, styles);
+          applyMarginStyles(node, styles);
+          applyAutoLayoutStyles(node, styles);
+          applyBorderStyles(node, styles);
+          _context6.next = 19;
+          break;
+        case 13:
+          if (!(node.type === 'TEXT')) {
+            _context6.next = 18;
+            break;
+          }
+          _context6.next = 16;
+          return applyTextStyles(node, styles);
+        case 16:
+          _context6.next = 19;
+          break;
+        case 18:
+          if (node.type === 'VECTOR') {
+            applyVectorStyles(node, styles);
+          } else {
+            // Apply general styles for other node types
+            applyBackgroundStyles(node, styles);
+            applyGeometryStyles(node, styles);
+            applyBorderStyles(node, styles);
+          }
+        case 19:
+          _context6.next = 24;
+          break;
+        case 21:
+          _context6.prev = 21;
+          _context6.t0 = _context6["catch"](1);
+          console.error("Error applying styles to node: ".concat(node.name), _context6.t0);
+        case 24:
         case "end":
-          return _context5.stop();
+          return _context6.stop();
       }
-    }, _callee5);
+    }, _callee6, null, [[1, 21]]);
   }));
   return _applyStylesToFigmaNode.apply(this, arguments);
+}
+function applyVectorStyles(node, styles) {
+  if (styles['fill']) {
+    var fillColor = extractColor(styles['fill']);
+    if (fillColor) {
+      node.fills = [{
+        type: 'SOLID',
+        color: fillColor
+      }];
+      console.log("Set fill of vector node ".concat(node.name, " to"), fillColor);
+    }
+  }
+  if (styles['stroke']) {
+    var strokeColor = extractColor(styles['stroke']);
+    if (strokeColor) {
+      node.strokes = [{
+        type: 'SOLID',
+        color: strokeColor
+      }];
+      node.strokeWeight = parseNumericValue(styles['stroke-width']) || 1;
+      console.log("Set stroke of vector node ".concat(node.name, " to"), strokeColor);
+    }
+  }
 }
 function applyBackgroundStyles(node, styles) {
   if (styles['background']) {
@@ -793,7 +903,7 @@ function applyTextStyles(node, styles) {
 }
 function applyBorderStyles(node, styles) {
   if (styles['border'] || styles['border-color'] || styles['border-width']) {
-    var borderColor = styles['border-color'] || 'rgba(0,0,0,1)';
+    var borderColor = styles['border-color'] || 'rgba(255,255,255,1)';
     var borderWidth = styles['border-width'] ? parseNumericValue(styles['border-width']) : 1;
     if (styles['border']) {
       // Improved parsing of border shorthand using regex
@@ -836,9 +946,14 @@ function sanitizeStrokeObject(stroke) {
   return sanitizedStroke;
 }
 function applyTransformStyles(node, styles) {
-  if (styles['transform']) {
-    node.relativeTransform = parseTransform(styles['transform']);
-    console.log("Set transform for node: ".concat(node.name));
+  var transformableNodeTypes = ['VECTOR', 'FRAME', 'GROUP', 'INSTANCE', 'COMPONENT', 'RECTANGLE', 'ELLIPSE', 'POLYGON', 'STAR', 'LINE', 'TEXT'];
+  if (styles['transform'] && transformableNodeTypes.includes(node.type)) {
+    try {
+      node.relativeTransform = parseTransform(styles['transform']);
+      console.log("Set transform for node: ".concat(node.name));
+    } catch (error) {
+      console.error("Error setting transform for node: ".concat(node.name), error);
+    }
   }
 }
 function applyOpacityStyles(node, styles) {
@@ -931,37 +1046,37 @@ function hexToFigmaRGB(hex) {
 }
 
 // Image Handling
-function handleImageNode(_x10) {
+function handleImageNode(_x12) {
   return _handleImageNode.apply(this, arguments);
 } // Design System Import
 function _handleImageNode() {
-  _handleImageNode = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6(domNode) {
+  _handleImageNode = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7(domNode) {
     var imgUrl, response, arrayBuffer, image, imageHash, width, height;
-    return _regeneratorRuntime().wrap(function _callee6$(_context6) {
-      while (1) switch (_context6.prev = _context6.next) {
+    return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+      while (1) switch (_context7.prev = _context7.next) {
         case 0:
-          _context6.prev = 0;
+          _context7.prev = 0;
           imgUrl = domNode.attribs.src;
           if (imgUrl) {
-            _context6.next = 4;
+            _context7.next = 4;
             break;
           }
-          return _context6.abrupt("return", null);
+          return _context7.abrupt("return", null);
         case 4:
-          _context6.next = 6;
+          _context7.next = 6;
           return fetch(imgUrl);
         case 6:
-          response = _context6.sent;
+          response = _context7.sent;
           if (response.ok) {
-            _context6.next = 9;
+            _context7.next = 9;
             break;
           }
           throw new Error("Network response was not ok: ".concat(response.statusText));
         case 9:
-          _context6.next = 11;
+          _context7.next = 11;
           return response.arrayBuffer();
         case 11:
-          arrayBuffer = _context6.sent;
+          arrayBuffer = _context7.sent;
           image = figma.createRectangle();
           imageHash = figma.createImage(new Uint8Array(arrayBuffer)).hash;
           image.fills = [{
@@ -974,133 +1089,133 @@ function _handleImageNode() {
           height = parseNumericValue(domNode.attribs.height) || 100;
           image.resize(width, height);
           console.log("Created Image node with size: ".concat(width, "x").concat(height));
-          return _context6.abrupt("return", image);
+          return _context7.abrupt("return", image);
         case 23:
-          _context6.prev = 23;
-          _context6.t0 = _context6["catch"](0);
-          console.error('Error fetching image:', _context6.t0);
-          return _context6.abrupt("return", null);
+          _context7.prev = 23;
+          _context7.t0 = _context7["catch"](0);
+          console.error('Error fetching image:', _context7.t0);
+          return _context7.abrupt("return", null);
         case 27:
-        case "end":
-          return _context6.stop();
-      }
-    }, _callee6, null, [[0, 23]]);
-  }));
-  return _handleImageNode.apply(this, arguments);
-}
-function importDesignSystem(_x11) {
-  return _importDesignSystem.apply(this, arguments);
-}
-function _importDesignSystem() {
-  _importDesignSystem = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7(designData) {
-    var _iterator10, _step10, componentData;
-    return _regeneratorRuntime().wrap(function _callee7$(_context7) {
-      while (1) switch (_context7.prev = _context7.next) {
-        case 0:
-          console.log('Importing design data:', designData);
-          _context7.prev = 1;
-          if (!designData.colors) {
-            _context7.next = 6;
-            break;
-          }
-          console.log('Importing colors...');
-          _context7.next = 6;
-          return importColors(designData.colors);
-        case 6:
-          if (!designData.fonts) {
-            _context7.next = 10;
-            break;
-          }
-          console.log('Importing fonts...');
-          _context7.next = 10;
-          return importFonts(designData.fonts);
-        case 10:
-          if (!designData.buttons) {
-            _context7.next = 14;
-            break;
-          }
-          console.log('Importing buttons...');
-          _context7.next = 14;
-          return importButtons(designData.buttons);
-        case 14:
-          if (!designData.components) {
-            _context7.next = 33;
-            break;
-          }
-          console.log('Importing components...');
-          _iterator10 = _createForOfIteratorHelper(designData.components);
-          _context7.prev = 17;
-          _iterator10.s();
-        case 19:
-          if ((_step10 = _iterator10.n()).done) {
-            _context7.next = 25;
-            break;
-          }
-          componentData = _step10.value;
-          _context7.next = 23;
-          return createFigmaComponentFromData(componentData);
-        case 23:
-          _context7.next = 19;
-          break;
-        case 25:
-          _context7.next = 30;
-          break;
-        case 27:
-          _context7.prev = 27;
-          _context7.t0 = _context7["catch"](17);
-          _iterator10.e(_context7.t0);
-        case 30:
-          _context7.prev = 30;
-          _iterator10.f();
-          return _context7.finish(30);
-        case 33:
-          if (!designData.logoUrl) {
-            _context7.next = 37;
-            break;
-          }
-          console.log('Importing logo...');
-          _context7.next = 37;
-          return importLogo(designData.logoUrl);
-        case 37:
-          _context7.next = 43;
-          break;
-        case 39:
-          _context7.prev = 39;
-          _context7.t1 = _context7["catch"](1);
-          console.error('Error during importDesignSystem:', _context7.t1);
-          throw _context7.t1;
-        case 43:
         case "end":
           return _context7.stop();
       }
-    }, _callee7, null, [[1, 39], [17, 27, 30, 33]]);
+    }, _callee7, null, [[0, 23]]);
   }));
+  return _handleImageNode.apply(this, arguments);
+}
+function importDesignSystem(_x13) {
   return _importDesignSystem.apply(this, arguments);
 }
-function importLogo(_x12) {
-  return _importLogo.apply(this, arguments);
-}
-function _importLogo() {
-  _importLogo = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8(logoUrl) {
-    var response, arrayBuffer, image, imageHash;
+function _importDesignSystem() {
+  _importDesignSystem = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8(designData) {
+    var _iterator11, _step11, componentData;
     return _regeneratorRuntime().wrap(function _callee8$(_context8) {
       while (1) switch (_context8.prev = _context8.next) {
         case 0:
-          _context8.prev = 0;
-          _context8.next = 3;
+          console.log('Importing design data:', designData);
+          _context8.prev = 1;
+          if (!designData.colors) {
+            _context8.next = 6;
+            break;
+          }
+          console.log('Importing colors...');
+          _context8.next = 6;
+          return importColors(designData.colors);
+        case 6:
+          if (!designData.fonts) {
+            _context8.next = 10;
+            break;
+          }
+          console.log('Importing fonts...');
+          _context8.next = 10;
+          return importFonts(designData.fonts);
+        case 10:
+          if (!designData.buttons) {
+            _context8.next = 14;
+            break;
+          }
+          console.log('Importing buttons...');
+          _context8.next = 14;
+          return importButtons(designData.buttons);
+        case 14:
+          if (!designData.components) {
+            _context8.next = 33;
+            break;
+          }
+          console.log('Importing components...');
+          _iterator11 = _createForOfIteratorHelper(designData.components);
+          _context8.prev = 17;
+          _iterator11.s();
+        case 19:
+          if ((_step11 = _iterator11.n()).done) {
+            _context8.next = 25;
+            break;
+          }
+          componentData = _step11.value;
+          _context8.next = 23;
+          return createFigmaComponentFromData(componentData);
+        case 23:
+          _context8.next = 19;
+          break;
+        case 25:
+          _context8.next = 30;
+          break;
+        case 27:
+          _context8.prev = 27;
+          _context8.t0 = _context8["catch"](17);
+          _iterator11.e(_context8.t0);
+        case 30:
+          _context8.prev = 30;
+          _iterator11.f();
+          return _context8.finish(30);
+        case 33:
+          if (!designData.logoUrl) {
+            _context8.next = 37;
+            break;
+          }
+          console.log('Importing logo...');
+          _context8.next = 37;
+          return importLogo(designData.logoUrl);
+        case 37:
+          _context8.next = 43;
+          break;
+        case 39:
+          _context8.prev = 39;
+          _context8.t1 = _context8["catch"](1);
+          console.error('Error during importDesignSystem:', _context8.t1);
+          throw _context8.t1;
+        case 43:
+        case "end":
+          return _context8.stop();
+      }
+    }, _callee8, null, [[1, 39], [17, 27, 30, 33]]);
+  }));
+  return _importDesignSystem.apply(this, arguments);
+}
+function importLogo(_x14) {
+  return _importLogo.apply(this, arguments);
+}
+function _importLogo() {
+  _importLogo = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee9(logoUrl) {
+    var response, arrayBuffer, image, imageHash;
+    return _regeneratorRuntime().wrap(function _callee9$(_context9) {
+      while (1) switch (_context9.prev = _context9.next) {
+        case 0:
+          _context9.prev = 0;
+          _context9.next = 3;
           return fetch(logoUrl);
         case 3:
-          response = _context8.sent;
+          response = _context9.sent;
           if (response.ok) {
-            _context8.next = 6;
+            _context9.next = 6;
             break;
           }
           throw new Error('Network response was not ok');
         case 6:
-          _context8.next = 8;
+          _context9.next = 8;
           return response.arrayBuffer();
         case 8:
-          arrayBuffer = _context8.sent;
+          arrayBuffer = _context9.sent;
           image = figma.createRectangle();
           imageHash = figma.createImage(new Uint8Array(arrayBuffer)).hash;
           image.fills = [{
@@ -1110,33 +1225,33 @@ function _importLogo() {
           }];
           image.name = 'Logo';
           figma.currentPage.appendChild(image);
-          _context8.next = 19;
+          _context9.next = 19;
           break;
         case 16:
-          _context8.prev = 16;
-          _context8.t0 = _context8["catch"](0);
-          console.error('Error importing logo:', _context8.t0);
+          _context9.prev = 16;
+          _context9.t0 = _context9["catch"](0);
+          console.error('Error importing logo:', _context9.t0);
         case 19:
         case "end":
-          return _context8.stop();
+          return _context9.stop();
       }
-    }, _callee8, null, [[0, 16]]);
+    }, _callee9, null, [[0, 16]]);
   }));
   return _importLogo.apply(this, arguments);
 }
-function importColors(_x13) {
+function importColors(_x15) {
   return _importColors.apply(this, arguments);
 }
 function _importColors() {
-  _importColors = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee9(colors) {
-    var _iterator11, _step11, colorToken, paintStyle, color;
-    return _regeneratorRuntime().wrap(function _callee9$(_context9) {
-      while (1) switch (_context9.prev = _context9.next) {
+  _importColors = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee10(colors) {
+    var _iterator12, _step12, colorToken, paintStyle, color;
+    return _regeneratorRuntime().wrap(function _callee10$(_context10) {
+      while (1) switch (_context10.prev = _context10.next) {
         case 0:
-          _iterator11 = _createForOfIteratorHelper(colors);
+          _iterator12 = _createForOfIteratorHelper(colors);
           try {
-            for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
-              colorToken = _step11.value;
+            for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
+              colorToken = _step12.value;
               paintStyle = figma.createPaintStyle();
               paintStyle.name = colorToken.name || "Color ".concat(colorToken.value);
               color = hexToFigmaRGB(colorToken.value);
@@ -1146,46 +1261,46 @@ function _importColors() {
               }];
             }
           } catch (err) {
-            _iterator11.e(err);
+            _iterator12.e(err);
           } finally {
-            _iterator11.f();
+            _iterator12.f();
           }
         case 2:
         case "end":
-          return _context9.stop();
+          return _context10.stop();
       }
-    }, _callee9);
+    }, _callee10);
   }));
   return _importColors.apply(this, arguments);
 }
-function importFonts(_x14) {
+function importFonts(_x16) {
   return _importFonts.apply(this, arguments);
 }
 function _importFonts() {
-  _importFonts = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee10(fonts) {
-    var loadedFonts, _iterator12, _step12, fontToken, fontFamily, fontStyle, fontKey, textStyle;
-    return _regeneratorRuntime().wrap(function _callee10$(_context10) {
-      while (1) switch (_context10.prev = _context10.next) {
+  _importFonts = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee11(fonts) {
+    var loadedFonts, _iterator13, _step13, fontToken, fontFamily, fontStyle, fontKey, textStyle;
+    return _regeneratorRuntime().wrap(function _callee11$(_context11) {
+      while (1) switch (_context11.prev = _context11.next) {
         case 0:
           loadedFonts = new Set();
-          _iterator12 = _createForOfIteratorHelper(fonts);
-          _context10.prev = 2;
-          _iterator12.s();
+          _iterator13 = _createForOfIteratorHelper(fonts);
+          _context11.prev = 2;
+          _iterator13.s();
         case 4:
-          if ((_step12 = _iterator12.n()).done) {
-            _context10.next = 28;
+          if ((_step13 = _iterator13.n()).done) {
+            _context11.next = 28;
             break;
           }
-          fontToken = _step12.value;
+          fontToken = _step13.value;
           fontFamily = fontToken.value;
           fontStyle = fontToken.style || 'Regular';
           fontKey = "".concat(fontFamily, "-").concat(fontStyle);
           if (loadedFonts.has(fontKey)) {
-            _context10.next = 22;
+            _context11.next = 22;
             break;
           }
-          _context10.prev = 10;
-          _context10.next = 13;
+          _context11.prev = 10;
+          _context11.next = 13;
           return figma.loadFontAsync({
             family: fontFamily,
             style: fontStyle
@@ -1193,14 +1308,14 @@ function _importFonts() {
         case 13:
           loadedFonts.add(fontKey);
           console.log("Loaded font: ".concat(fontFamily, " ").concat(fontStyle));
-          _context10.next = 20;
+          _context11.next = 20;
           break;
         case 17:
-          _context10.prev = 17;
-          _context10.t0 = _context10["catch"](10);
-          console.error("Failed to load font: ".concat(fontFamily, " ").concat(fontStyle), _context10.t0);
+          _context11.prev = 17;
+          _context11.t0 = _context11["catch"](10);
+          console.error("Failed to load font: ".concat(fontFamily, " ").concat(fontStyle), _context11.t0);
         case 20:
-          _context10.next = 23;
+          _context11.next = 23;
           break;
         case 22:
           console.log("Font already loaded: ".concat(fontFamily, " ").concat(fontStyle));
@@ -1212,77 +1327,77 @@ function _importFonts() {
             style: fontStyle
           };
         case 26:
-          _context10.next = 4;
+          _context11.next = 4;
           break;
         case 28:
-          _context10.next = 33;
+          _context11.next = 33;
           break;
         case 30:
-          _context10.prev = 30;
-          _context10.t1 = _context10["catch"](2);
-          _iterator12.e(_context10.t1);
+          _context11.prev = 30;
+          _context11.t1 = _context11["catch"](2);
+          _iterator13.e(_context11.t1);
         case 33:
-          _context10.prev = 33;
-          _iterator12.f();
-          return _context10.finish(33);
-        case 36:
-        case "end":
-          return _context10.stop();
-      }
-    }, _callee10, null, [[2, 30, 33, 36], [10, 17]]);
-  }));
-  return _importFonts.apply(this, arguments);
-}
-function importButtons(_x15) {
-  return _importButtons.apply(this, arguments);
-}
-function _importButtons() {
-  _importButtons = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee11(buttons) {
-    var _iterator13, _step13, buttonToken;
-    return _regeneratorRuntime().wrap(function _callee11$(_context11) {
-      while (1) switch (_context11.prev = _context11.next) {
-        case 0:
-          _iterator13 = _createForOfIteratorHelper(buttons);
-          _context11.prev = 1;
-          _iterator13.s();
-        case 3:
-          if ((_step13 = _iterator13.n()).done) {
-            _context11.next = 9;
-            break;
-          }
-          buttonToken = _step13.value;
-          _context11.next = 7;
-          return createButtonComponent(buttonToken);
-        case 7:
-          _context11.next = 3;
-          break;
-        case 9:
-          _context11.next = 14;
-          break;
-        case 11:
-          _context11.prev = 11;
-          _context11.t0 = _context11["catch"](1);
-          _iterator13.e(_context11.t0);
-        case 14:
-          _context11.prev = 14;
+          _context11.prev = 33;
           _iterator13.f();
-          return _context11.finish(14);
-        case 17:
+          return _context11.finish(33);
+        case 36:
         case "end":
           return _context11.stop();
       }
-    }, _callee11, null, [[1, 11, 14, 17]]);
+    }, _callee11, null, [[2, 30, 33, 36], [10, 17]]);
+  }));
+  return _importFonts.apply(this, arguments);
+}
+function importButtons(_x17) {
+  return _importButtons.apply(this, arguments);
+}
+function _importButtons() {
+  _importButtons = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee12(buttons) {
+    var _iterator14, _step14, buttonToken;
+    return _regeneratorRuntime().wrap(function _callee12$(_context12) {
+      while (1) switch (_context12.prev = _context12.next) {
+        case 0:
+          _iterator14 = _createForOfIteratorHelper(buttons);
+          _context12.prev = 1;
+          _iterator14.s();
+        case 3:
+          if ((_step14 = _iterator14.n()).done) {
+            _context12.next = 9;
+            break;
+          }
+          buttonToken = _step14.value;
+          _context12.next = 7;
+          return createButtonComponent(buttonToken);
+        case 7:
+          _context12.next = 3;
+          break;
+        case 9:
+          _context12.next = 14;
+          break;
+        case 11:
+          _context12.prev = 11;
+          _context12.t0 = _context12["catch"](1);
+          _iterator14.e(_context12.t0);
+        case 14:
+          _context12.prev = 14;
+          _iterator14.f();
+          return _context12.finish(14);
+        case 17:
+        case "end":
+          return _context12.stop();
+      }
+    }, _callee12, null, [[1, 11, 14, 17]]);
   }));
   return _importButtons.apply(this, arguments);
 }
-function createButtonComponent(_x16) {
+function createButtonComponent(_x18) {
   return _createButtonComponent.apply(this, arguments);
 } // Plugin UI Setup
 function _createButtonComponent() {
-  _createButtonComponent = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee12(buttonToken) {
+  _createButtonComponent = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee13(buttonToken) {
     var value, name, component, rect, text, fontFamily, fontStyle;
-    return _regeneratorRuntime().wrap(function _callee12$(_context12) {
-      while (1) switch (_context12.prev = _context12.next) {
+    return _regeneratorRuntime().wrap(function _callee13$(_context13) {
+      while (1) switch (_context13.prev = _context13.next) {
         case 0:
           value = buttonToken.value, name = buttonToken.name;
           component = figma.createComponent();
@@ -1304,14 +1419,14 @@ function _createButtonComponent() {
           text = figma.createText();
           fontFamily = value['font-family'] || 'Roboto';
           fontStyle = value['font-style'] || 'Regular';
-          _context12.next = 12;
+          _context13.next = 12;
           return figma.loadFontAsync({
             family: fontFamily,
             style: fontStyle
           });
         case 12:
           text.characters = name || 'Button';
-          _context12.next = 15;
+          _context13.next = 15;
           return applyStylesToFigmaNode(text, value);
         case 15:
           component.appendChild(text);
@@ -1320,9 +1435,9 @@ function _createButtonComponent() {
           component.resize(rect.width, rect.height);
         case 19:
         case "end":
-          return _context12.stop();
+          return _context13.stop();
       }
-    }, _callee12);
+    }, _callee13);
   }));
   return _createButtonComponent.apply(this, arguments);
 }
@@ -1365,7 +1480,7 @@ figma.ui.onmessage = /*#__PURE__*/function () {
       }
     }, _callee, null, [[4, 10, 14, 17]]);
   }));
-  return function (_x17) {
+  return function (_x19) {
     return _ref.apply(this, arguments);
   };
 }();

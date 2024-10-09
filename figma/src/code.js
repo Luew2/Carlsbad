@@ -1,7 +1,7 @@
 // Required dependencies
 const htmlparser2 = require('htmlparser2');
 const css = require('css');
-const domSerializer = require('dom-serializer');
+const domSerializer = require('dom-serializer').default;
 const Color = require('color');
 const { Element, Text, Comment } = require('domhandler');
 
@@ -104,7 +104,7 @@ async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles 
     console.log(`${indent}Tag name: ${tagName}`);
 
     if (tagName === 'svg') {
-      figmaNode = handleSVGElement(domNode);
+      figmaNode = await handleSVGElement(domNode, cssStyles);
     } else if (tagName === 'img') {
       figmaNode = await handleImageNode(domNode);
     } else {
@@ -176,16 +176,14 @@ function parseTransform(transform) {
     const values = matrixMatch[1].split(',').map(parseFloat);
     if (values.length >= 6) {
       return [
-        [values[0], values[1], 0],
-        [values[2], values[3], 0],
-        [values[4], values[5], 1],
+        [values[0], values[2], values[4]], // Note the positions of the indices
+        [values[1], values[3], values[5]],
       ];
     }
   }
   return [
     [1, 0, 0],
     [0, 1, 0],
-    [0, 0, 1],
   ];
 }
 
@@ -219,11 +217,35 @@ function getTextContent(domNode) {
   return text.trim();
 }
 
-function handleSVGElement(domNode) {
+// function handleSVGElement(domNode) {
+//   try {
+//     console.log(`Handling SVG element: ${domNode.name}`);
+//     const svgString = domSerializer(domNode, { xmlMode: true });
+//     console.log(`SVG string: ${svgString}`);
+//     const svgNode = figma.createNodeFromSvg(svgString);
+//     console.log(`Created SVG node: ${svgNode.name}`);
+//     return svgNode;
+//   } catch (error) {
+//     console.error('Error creating SVG node:', error);
+//     return null;
+//   }
+// }
+
+async function handleSVGElement(domNode, cssStyles) {
   try {
+    console.log(`Handling SVG element: ${domNode.name}`);
     const svgString = domSerializer(domNode, { xmlMode: true });
+    console.log(`Serialized SVG string: ${svgString}`);
     const svgNode = figma.createNodeFromSvg(svgString);
     console.log(`Created SVG node: ${svgNode.name}`);
+
+    // Get the fill color from the styles
+    const nodeStyles = getNodeStyles(domNode, cssStyles);
+    if (nodeStyles && nodeStyles['fill']) {
+      const fillColor = cssColorToFigmaRGB(nodeStyles['fill']);
+      applyFillToVectorNodes(svgNode, fillColor);
+    }
+
     return svgNode;
   } catch (error) {
     console.error('Error creating SVG node:', error);
@@ -231,6 +253,18 @@ function handleSVGElement(domNode) {
   }
 }
 
+function applyFillToVectorNodes(node, fillColor) {
+  if ('fills' in node && node.type === 'VECTOR') {
+    node.fills = [{ type: 'SOLID', color: fillColor }];
+    console.log(`Set fill color of vector node ${node.name} to`, fillColor);
+  }
+
+  if ('children' in node && node.children.length > 0) {
+    for (const child of node.children) {
+      applyFillToVectorNodes(child, fillColor);
+    }
+  }
+}
 
 async function setTextNodeContent(textNode, domNode, styles) {
   const fontFamily = styles['font-family'] || 'Roboto';
@@ -311,6 +345,8 @@ function mapAlignItems(value) {
 }
 
 function getNodeStyles(domNode, cssStyles) {
+  console.log(`Fetching styles for node: ${domNode.name}`);
+  console.log(`CSS Styles:`, cssStyles);
   const styles = {};
   const selectors = getSelectorsForNode(domNode);
   console.log(`Fetching styles for node: ${domNode.name}, Selectors:`, selectors);
@@ -361,33 +397,51 @@ async function applyStylesToFigmaNode(node, styles) {
   console.log(`Applying styles to node: ${node.name}`, styles);
 
   try {
-    if (node.type === 'FRAME') {
+    // Common styles for all node types
+    applyOpacityStyles(node, styles);
+    applyTransformStyles(node, styles);
+
+    if (node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'COMPONENT') {
+      // Apply container-specific styles
       applyBackgroundStyles(node, styles);
       applyGeometryStyles(node, styles);
       applyPaddingStyles(node, styles);
       applyMarginStyles(node, styles);
       applyAutoLayoutStyles(node, styles);
       applyBorderStyles(node, styles);
-      applyTransformStyles(node, styles);
-      applyOpacityStyles(node, styles);
     } else if (node.type === 'TEXT') {
-      applyBorderStyles(node, styles);
-      applyOpacityStyles(node, styles);
-      // Text-specific styles are handled separately
+      await applyTextStyles(node, styles);
+    } else if (node.type === 'VECTOR') {
+      applyVectorStyles(node, styles);
     } else {
-      // Apply general styles for other node types if necessary
+      // Apply general styles for other node types
       applyBackgroundStyles(node, styles);
       applyGeometryStyles(node, styles);
       applyBorderStyles(node, styles);
-      applyTransformStyles(node, styles);
-      applyOpacityStyles(node, styles);
     }
   } catch (error) {
     console.error(`Error applying styles to node: ${node.name}`, error);
   }
 }
 
+function applyVectorStyles(node, styles) {
+  if (styles['fill']) {
+    const fillColor = extractColor(styles['fill']);
+    if (fillColor) {
+      node.fills = [{ type: 'SOLID', color: fillColor }];
+      console.log(`Set fill of vector node ${node.name} to`, fillColor);
+    }
+  }
 
+  if (styles['stroke']) {
+    const strokeColor = extractColor(styles['stroke']);
+    if (strokeColor) {
+      node.strokes = [{ type: 'SOLID', color: strokeColor }];
+      node.strokeWeight = parseNumericValue(styles['stroke-width']) || 1;
+      console.log(`Set stroke of vector node ${node.name} to`, strokeColor);
+    }
+  }
+}
 
 function applyBackgroundStyles(node, styles) {
   if (styles['background']) {
@@ -559,7 +613,7 @@ function applyTextStyles(node, styles) {
 
 function applyBorderStyles(node, styles) {
   if (styles['border'] || styles['border-color'] || styles['border-width']) {
-    let borderColor = styles['border-color'] || 'rgba(0,0,0,1)';
+    let borderColor = styles['border-color'] || 'rgba(255,255,255,1)';
     let borderWidth = styles['border-width'] ? parseNumericValue(styles['border-width']) : 1;
 
     if (styles['border']) {
@@ -603,9 +657,15 @@ function sanitizeStrokeObject(stroke) {
 
 
 function applyTransformStyles(node, styles) {
-  if (styles['transform']) {
-    node.relativeTransform = parseTransform(styles['transform']);
-    console.log(`Set transform for node: ${node.name}`);
+  const transformableNodeTypes = ['VECTOR', 'FRAME', 'GROUP', 'INSTANCE', 'COMPONENT', 'RECTANGLE', 'ELLIPSE', 'POLYGON', 'STAR', 'LINE', 'TEXT'];
+
+  if (styles['transform'] && transformableNodeTypes.includes(node.type)) {
+    try {
+      node.relativeTransform = parseTransform(styles['transform']);
+      console.log(`Set transform for node: ${node.name}`);
+    } catch (error) {
+      console.error(`Error setting transform for node: ${node.name}`, error);
+    }
   }
 }
 
