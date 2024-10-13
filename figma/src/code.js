@@ -3,17 +3,27 @@ const htmlparser2 = require('htmlparser2');
 const css = require('css');
 const domSerializer = require('dom-serializer').default;
 const Color = require('color');
-const { Element, Text, Comment } = require('domhandler');
 
 // Main component creation function
-async function createFigmaComponentFromData(componentData) {
+async function createFigmaComponentFromData(componentData, position = { x: 0, y: 0 }) {
   const { html, css: cssText, name } = componentData;
   const cssStyles = parseCSS(cssText);
   const dom = htmlparser2.parseDocument(html);
 
   const frame = figma.createFrame();
   frame.name = name || 'Component';
+
+  frame.x = position.x;
+  frame.y = position.y;
+
+  // Set the layout mode and sizing modes for auto-layout
+  frame.layoutMode = 'VERTICAL';
+  frame.primaryAxisSizingMode = 'AUTO';
+  frame.counterAxisSizingMode = 'AUTO';
+  frame.clipsContent = false; // Prevent content from being clipped
+
   console.log(`Creating component: ${frame.name}`);
+
 
   if (dom.children && dom.children.length > 0) {
     for (const childNode of dom.children) {
@@ -23,6 +33,7 @@ async function createFigmaComponentFromData(componentData) {
 
   figma.currentPage.appendChild(frame);
   console.log(`Appended frame: ${frame.name} to current page.`);
+  return frame;
 }
 
 
@@ -78,10 +89,15 @@ function createFigmaNodeForHTML(tagName) {
     figmaNode = null;
   } else {
     figmaNode = figma.createFrame();
+     // Default to auto-layout for other elements
+     figmaNode.layoutMode = 'VERTICAL';
+     figmaNode.primaryAxisSizingMode = 'AUTO';
+     figmaNode.counterAxisSizingMode = 'AUTO';
   }
 
   if (figmaNode) {
     figmaNode.name = tagName;
+    figmaNode.clipsContent = false; // Prevent clipping
     console.log(`Created Figma node: ${figmaNode.name}`);
   }
 
@@ -217,20 +233,6 @@ function getTextContent(domNode) {
   return text.trim();
 }
 
-// function handleSVGElement(domNode) {
-//   try {
-//     console.log(`Handling SVG element: ${domNode.name}`);
-//     const svgString = domSerializer(domNode, { xmlMode: true });
-//     console.log(`SVG string: ${svgString}`);
-//     const svgNode = figma.createNodeFromSvg(svgString);
-//     console.log(`Created SVG node: ${svgNode.name}`);
-//     return svgNode;
-//   } catch (error) {
-//     console.error('Error creating SVG node:', error);
-//     return null;
-//   }
-// }
-
 async function handleSVGElement(domNode, cssStyles) {
   try {
     console.log(`Handling SVG element: ${domNode.name}`);
@@ -267,26 +269,112 @@ function applyFillToVectorNodes(node, fillColor) {
 }
 
 async function setTextNodeContent(textNode, domNode, styles) {
-  const fontFamily = styles['font-family'] || 'Roboto';
-  const fontStyle = styles['font-style'] || 'Regular';
-  const fontName = { family: fontFamily, style: fontStyle };
+  let fontFamily = parseFontFamily(styles['font-family']);
+  let fontStyleCSS = styles['font-style'] || '';
+  let fontWeight = styles['font-weight'] || '400'; // Default to 400 (Regular)
 
-  console.log(`Loading font: ${fontName.family} ${fontName.style}`);
+  // Map font-weight and font-style to Figma font style
+  let figmaFontStyle = mapFontWeightToFigmaStyle(fontStyleCSS, fontWeight);
+
+  let fontName = { family: fontFamily, style: figmaFontStyle };
+
+  console.log(`Attempting to load font: ${fontName.family} ${fontName.style}`);
   try {
     await figma.loadFontAsync(fontName);
     textNode.fontName = fontName;
-    console.log(`Set font family:`, textNode.fontName);
+    console.log(`Set font: ${fontName.family} ${fontName.style}`);
   } catch (error) {
     console.error(`Failed to load font: ${fontName.family} ${fontName.style}`, error);
-    textNode.fontName = { family: 'Roboto', style: 'Regular' };
+
+    // Fallback to default font
+    fontName = { family: 'Arial', style: 'Regular' };
+    await figma.loadFontAsync(fontName);
+    textNode.fontName = fontName;
+    console.log(`Fallback to default font: ${fontName.family} ${fontName.style}`);
   }
 
   const textContent = getTextContent(domNode);
-  textNode.characters = textContent;
-  console.log(`Set text characters: "${textNode.characters}"`);
+  textNode.characters = textContent || ' '; // Ensure there's at least a space character
+  console.log(`Set text content: "${textNode.characters}"`);
 }
 
+function parseFontFamily(fontFamilyString) {
+  if (!fontFamilyString) return 'Arial';
 
+  // Split the fontFamilyString by commas to handle multiple fonts
+  const fontFamilies = fontFamilyString.split(',');
+
+  for (let family of fontFamilies) {
+    // Remove any quotes and trim whitespace
+    family = family.replace(/['"]/g, '').trim();
+
+    // Return the first non-empty font family
+    if (family) return family;
+  }
+
+  // Fallback to 'Arial' if no valid fonts are found
+  return 'Arial';
+}
+
+function mapFontWeightToFigmaStyle(fontStyle, fontWeight) {
+  const isItalic = fontStyle.toLowerCase().includes('italic');
+  let style = 'Regular'; // Default style
+
+  switch (fontWeight.toString()) {
+    case '100':
+    case '200':
+      style = 'Thin';
+      break;
+    case '300':
+      style = 'Light';
+      break;
+    case '400':
+    case 'normal':
+      style = 'Regular';
+      break;
+    case '500':
+      style = 'Medium';
+      break;
+    case '600':
+      style = 'Semi Bold';
+      break;
+    case '700':
+    case 'bold':
+      style = 'Bold';
+      break;
+    case '800':
+      style = 'Extra Bold';
+      break;
+    case '900':
+      style = 'Black';
+      break;
+    default:
+      style = 'Regular';
+      break;
+  }
+
+  if (isItalic) style += ' Italic';
+  return style;
+}
+
+const loadedFonts = new Set();
+
+async function loadFont(fontName) {
+  const fontKey = `${fontName.family}_${fontName.style}`;
+  if (loadedFonts.has(fontKey)) {
+    // Font is already loaded
+    return;
+  }
+
+  try {
+    await figma.loadFontAsync(fontName);
+    loadedFonts.add(fontKey);
+    console.log(`Loaded font: ${fontKey}`);
+  } catch (error) {
+    console.error(`Failed to load font: ${fontKey}`, error);
+    throw error;
+  }
+}
 
 function applyAutoLayoutStyles(node, styles) {
   if (node.type !== 'FRAME') return;
@@ -338,7 +426,6 @@ function mapAlignItems(value) {
     'flex-start': 'MIN',
     'flex-end': 'MAX',
     'center': 'CENTER',
-    'stretch': 'STRETCH',
     'baseline': 'BASELINE'
   };
   return map[value] || 'MIN';
@@ -404,9 +491,8 @@ async function applyStylesToFigmaNode(node, styles) {
     if (node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'COMPONENT') {
       // Apply container-specific styles
       applyBackgroundStyles(node, styles);
+      applyLayoutStyles(node, styles);
       applyGeometryStyles(node, styles);
-      applyPaddingStyles(node, styles);
-      applyMarginStyles(node, styles);
       applyAutoLayoutStyles(node, styles);
       applyBorderStyles(node, styles);
     } else if (node.type === 'TEXT') {
@@ -467,19 +553,34 @@ function applyGeometryStyles(node, styles) {
     console.log(`Set border radius to:`, node.cornerRadius);
   }
 
+  // Avoid setting fixed width and height when using auto-layout
   if (styles['width']) {
     const width = parseNumericValue(styles['width']);
     if (!isNaN(width)) {
-      node.resize(width, node.height);
-      console.log(`Set width: ${width}`);
+      if (node.layoutMode === 'NONE') {
+        node.resize(width, node.height);
+        console.log(`Set width: ${width}`);
+      } else {
+        // In auto-layout, set sizing mode to FIXED if width is specified
+        node.primaryAxisSizingMode = 'FIXED';
+        node.resize(width, node.height);
+        console.log(`Set width and primaryAxisSizingMode to FIXED: ${width}`);
+      }
     }
   }
 
   if (styles['height']) {
     const height = parseNumericValue(styles['height']);
     if (!isNaN(height)) {
-      node.resize(node.width, height);
-      console.log(`Set height: ${height}`);
+      if (node.layoutMode === 'NONE') {
+        node.resize(node.width, height);
+        console.log(`Set height: ${height}`);
+      } else {
+        // In auto-layout, set sizing mode to FIXED if height is specified
+        node.counterAxisSizingMode = 'FIXED';
+        node.resize(node.width, height);
+        console.log(`Set height and counterAxisSizingMode to FIXED: ${height}`);
+      }
     }
   }
 }
@@ -487,7 +588,19 @@ function applyGeometryStyles(node, styles) {
 
 function applyLayoutStyles(node, styles) {
   applyPaddingStyles(node, styles);
-  applyMarginStyles(node, styles);
+  // applyMarginStyles(node, styles);
+  if (styles['position'] === 'absolute') {
+    // In Figma, this corresponds to setting the node to absolute positioning
+    if ('layoutPositioning' in node) {
+      node.layoutPositioning = 'ABSOLUTE';
+    }
+    console.log(`Set node ${node.name} to absolute positioning.`);
+  } else {
+    // Ensure the node is set to normal positioning
+    if ('layoutPositioning' in node) {
+      node.layoutPositioning = 'AUTO'; // or 'NORMAL'
+    }
+  }
 
   if (styles['display'] === 'flex') {
     const flexDirection = styles['flex-direction'] || 'row';
@@ -500,13 +613,6 @@ function applyLayoutStyles(node, styles) {
     console.log(`Disabled auto-layout for node: ${node.name}`);
   }
 }
-
-const paddingMap = {
-  'padding-top': 'paddingTop',
-  'padding-bottom': 'paddingBottom',
-  'padding-left': 'paddingLeft',
-  'padding-right': 'paddingRight',
-};
 
 function applyPaddingStyles(node, styles) {
   if (node.type !== 'FRAME') {
@@ -538,9 +644,6 @@ function applyPaddingStyles(node, styles) {
   }
 }
 
-
-
-
 function applyMarginStyles(node, styles) {
   if (node.type !== 'FRAME') {
     console.warn(`Cannot apply margin to node type: ${node.type}`);
@@ -566,45 +669,57 @@ function applyMarginStyles(node, styles) {
   }
 }
 
-
-
-function applyTextStyles(node, styles) {
+async function applyTextStyles(node, styles) {
+  // Set font size
   if (styles['font-size']) {
     node.fontSize = parseNumericValue(styles['font-size']) || 12;
     console.log(`Set font size to: ${node.fontSize}`);
   }
 
-  if (styles['font-family']) {
-    const fontFamily = styles['font-family'];
-    const fontStyle = styles['font-style'] || 'Regular';
-    node.fontName = { family: fontFamily, style: fontStyle };
-    console.log(`Set font to: ${fontFamily} ${fontStyle}`);
+  // Parse font family
+  let fontFamily = parseFontFamily(styles['font-family']);
+  // Map font-weight and font-style to Figma font style
+  let fontStyleCSS = styles['font-style'] || ''; // e.g., 'italic'
+  let fontWeight = styles['font-weight'] || '400'; // e.g., 'bold' or '700'
+  let figmaFontStyle = mapFontWeightToFigmaStyle(fontStyleCSS, fontWeight);
+  let fontName = { family: fontFamily, style: figmaFontStyle };
+
+  console.log(`Attempting to load font: ${fontName.family} ${fontName.style}`);
+  try {
+    await loadFont(fontName);
+    node.fontName = fontName;
+    console.log(`Set font to: ${fontName.family} ${fontName.style}`);
+  } catch (error) {
+    console.error(`Failed to load font: ${fontName.family} ${fontName.style}`, error);
+    // Fallback to default font
+    const fallbackFont = { family: 'Arial', style: 'Regular' };
+    await loadFont(fallbackFont);
+    node.fontName = fallbackFont;
+    console.log(`Fallback to default font: ${fallbackFont.family} ${fallbackFont.style}`);
   }
 
-  if (styles['font-weight']) {
-    // Optionally map font-weight to font-style if needed
-    console.log(`Font weight handling is pending for: ${styles['font-weight']}`);
-  }
-
+  // Set text color
   if (styles['color']) {
     const color = cssColorToFigmaRGB(styles['color']);
     node.fills = [{ type: 'SOLID', color }];
     console.log(`Set text color to:`, color);
   }
 
+  // Set text alignment
   if (styles['text-align']) {
     const alignmentMap = { 'left': 'LEFT', 'center': 'CENTER', 'right': 'RIGHT', 'justify': 'JUSTIFIED' };
     node.textAlignHorizontal = alignmentMap[styles['text-align']] || 'LEFT';
     console.log(`Set text alignment to: ${node.textAlignHorizontal}`);
   }
 
+  // Set line height
   if (styles['line-height']) {
     const lineHeightValue = parseNumericValue(styles['line-height']);
     if (!isNaN(lineHeightValue)) {
-      node.lineHeight = { unit: "PIXELS", value: lineHeightValue };
+      node.lineHeight = { unit: 'PIXELS', value: lineHeightValue };
       console.log(`Set line height to: ${node.lineHeight.value}`);
     } else {
-      node.lineHeight = { unit: "PIXELS", value: node.fontSize * 1.2 };
+      node.lineHeight = { unit: 'PIXELS', value: node.fontSize * 1.2 };
       console.log(`Set default line height to: ${node.lineHeight.value}`);
     }
   }
@@ -642,19 +757,6 @@ function applyBorderStyles(node, styles) {
     }
   }
 }
-
-
-function sanitizeStrokeObject(stroke) {
-  const allowedProps = ['type', 'color'];
-  const sanitizedStroke = {};
-  for (const prop of allowedProps) {
-    if (stroke[prop] !== undefined) {
-      sanitizedStroke[prop] = stroke[prop];
-    }
-  }
-  return sanitizedStroke;
-}
-
 
 function applyTransformStyles(node, styles) {
   const transformableNodeTypes = ['VECTOR', 'FRAME', 'GROUP', 'INSTANCE', 'COMPONENT', 'RECTANGLE', 'ELLIPSE', 'POLYGON', 'STAR', 'LINE', 'TEXT'];
@@ -790,8 +892,17 @@ async function importDesignSystem(designData) {
 
     if (designData.components) {
       console.log('Importing components...');
+    
+      // Initialize the position tracking variable
+      let currentYPosition = 0;
+      const componentSpacing = 100; // Space between components, adjust as needed
+    
       for (const componentData of designData.components) {
-        await createFigmaComponentFromData(componentData);
+        // Create the component and retrieve the frame to access its dimensions
+        const frame = await createFigmaComponentFromData(componentData, { x: 0, y: currentYPosition });
+    
+        // Update the currentXPosition for the next component
+        currentYPosition += frame.height + componentSpacing;
       }
     }
 
@@ -882,7 +993,7 @@ async function createButtonComponent(buttonToken) {
   }
 
   const text = figma.createText();
-  const fontFamily = value['font-family'] || 'Roboto';
+  const fontFamily = value['font-family'] || 'Arial';
   const fontStyle = value['font-style'] || 'Regular';
   
   await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
