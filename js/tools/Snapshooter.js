@@ -108,8 +108,7 @@ function Snapshooter(root) {
 	}
 
 	function createID(node) {
-		//":snappysnippet_prefix:" is a prefix placeholder
-		return ':snappysnippet_prefix:' + node.tagName + '_' + idCounter++;
+		return node.tagName + '_' + idCounter++;
 	}
 
 	function dumpCSS(node, pseudoElement) {
@@ -202,6 +201,49 @@ function Snapshooter(root) {
 		}
 	}
 
+	function buildElementTree(element, root, clone) {
+
+		// Get element's bounding rectangle
+		var rect = element.getBoundingClientRect();
+		var rootRect = root.getBoundingClientRect();
+
+		console.log(rect);
+
+		// Calculate x and y relative to parent
+		// Assuming rootX and rootY are the x and y of the root element
+		if (rect.left <= rootRect.left) {
+			var x = 0
+			var y = 0
+		} else {
+			var x = rect.left - rootRect.left;
+			var y = rect.top - rootRect.top;
+		}
+
+		var width = rect.width;
+		var height = rect.height;
+
+		// Build the element data object
+		var elementData = {
+			id: clone.getAttribute('id'),
+			tagName: element.tagName,
+			x: x,
+			y: y,
+			width: width,
+			height: height,
+			children: []
+		};
+
+		// Process child elements recursively
+		var children = element.children;
+		var cloneChildren = clone.children;
+		for (var i = 0; i < children.length; i++) {
+			var childData = buildElementTree(children[i], root, cloneChildren[i]);
+			elementData.children.push(childData);
+		}
+
+		return elementData;
+	}
+
 	function init() {
 		var css = [],
 			ancestorCss = [],
@@ -242,6 +284,7 @@ function Snapshooter(root) {
 
 		clone.setAttribute('id', createID(clone));
 
+
 		for (i = 0, l = descendants.length; i < l; i++) {
 			descendant = descendants[i];
 			descendant.setAttribute('id', createID(descendant));
@@ -261,12 +304,15 @@ function Snapshooter(root) {
 		}
 		trailingAncestorHtml = htmlSegments.join('');
 
+		const elementTree = buildElementTree(root, root, clone);
+
 		return JSON.stringify({
 			html: clone.outerHTML,
 			leadingAncestorHtml: leadingAncestorHtml,
 			trailingAncestorHtml: trailingAncestorHtml,
 			css: css,
-			ancestorCss: ancestorCss
+			ancestorCss: ancestorCss,
+			elementTree: elementTree
 		});
 	}
 

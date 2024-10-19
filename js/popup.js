@@ -304,6 +304,7 @@ function exportComponents() {
           name: component.name || `Component ${index + 1}`,
           html: component.html,
           css: component.css,
+          elementTree: component.elementTree,
           // screenshot: component.screenshot, // Optional: Include if needed
         };
       });

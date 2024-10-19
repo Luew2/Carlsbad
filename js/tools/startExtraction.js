@@ -11,6 +11,8 @@
     function processSnapshot(snapshot) {
         let styles = snapshot.css;
         let html = snapshot.html;
+        let elementTree = snapshot.elementTree; // Get the elementTree
+
 
         // Include ancestor styles if needed
         if (snapshot.ancestorCss && snapshot.ancestorCss.length) {
@@ -56,6 +58,7 @@
         return {
             html: html,
             css: cssString,
+            elementTree: elementTree,
         };
     }
 

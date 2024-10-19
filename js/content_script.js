@@ -30,6 +30,7 @@
           name: newComponentName,
           html: componentData.html,
           css: componentData.css,
+          elementTree: componentData.elementTree,
           screenshot: screenshotData,
         };
     

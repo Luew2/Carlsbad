@@ -27,7 +27,7 @@ async function createFigmaComponentFromData(componentData, position = { x: 0, y:
 
   if (dom.children && dom.children.length > 0) {
     for (const childNode of dom.children) {
-      await processDomNode(childNode, frame, cssStyles);
+      await processDomNode(childNode, frame, cssStyles, {}, 0, frame.layoutMode);
     }
   }
 
@@ -64,6 +64,7 @@ function parseCSS(cssText) {
 }
 
 
+// HTML to Figma node mapping
 // HTML to Figma node mapping
 function createFigmaNodeForHTML(tagName) {
   console.log(`Handling HTML element: ${tagName}`);
@@ -105,7 +106,7 @@ function createFigmaNodeForHTML(tagName) {
 }
 
 // Main DOM processing function
-async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles = {}, depth = 0) {
+async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles = {}, depth = 0, parentLayoutMode = 'NONE') {
   if (!domNode) return;
 
   const indent = '  '.repeat(depth);
@@ -131,20 +132,25 @@ async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles 
     console.log(`${indent}Node styles:`, nodeStyles);
 
     if (figmaNode) {
+      parentFigmaNode.appendChild(figmaNode);
+      console.log(`${indent}Appended node: ${figmaNode.name} to parent: ${parentFigmaNode.name}`);
+    }
+
+    if (figmaNode) {
       const combinedStyles = { ...parentStyles, ...nodeStyles };
 
       if (figmaNode.type === 'TEXT') {
         await setTextNodeContent(figmaNode, domNode, combinedStyles);
         await applyTextStyles(figmaNode, combinedStyles);
       } else {
-        await applyStylesToFigmaNode(figmaNode, combinedStyles);
-        applyAutoLayoutStyles(figmaNode, combinedStyles);
+        await applyStylesToFigmaNode(figmaNode, parentFigmaNode, combinedStyles);
+        // applyAutoLayoutStyles(figmaNode, combinedStyles);
 
         if (figmaNode.type === 'FRAME') {
           if (domNode.children && domNode.children.length > 0) {
             console.log(`${indent}Processing ${domNode.children.length} children of Frame node at depth ${depth}`);
             for (const childNode of domNode.children) {
-              await processDomNode(childNode, figmaNode, cssStyles, nodeStyles, depth + 1);
+              await processDomNode(childNode, figmaNode, cssStyles, nodeStyles, depth + 1,  figmaNode.layoutMode);
             }
           }
         }
@@ -159,13 +165,11 @@ async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles 
       const combinedStyles = { ...parentStyles };
       await setTextNodeContent(figmaNode, domNode, combinedStyles);
       await applyTextStyles(figmaNode, combinedStyles);
+      parentFigmaNode.appendChild(figmaNode);
     }
   }
 
-  if (figmaNode) {
-    parentFigmaNode.appendChild(figmaNode);
-    console.log(`${indent}Appended node: ${figmaNode.name} to parent: ${parentFigmaNode.name}`);
-  }
+
 }
 
 
@@ -480,20 +484,24 @@ function getSelectorsForNode(domNode) {
   return selectors;
 }
 
-async function applyStylesToFigmaNode(node, styles) {
+async function applyStylesToFigmaNode(node, parentFigmaNode, styles) {
   console.log(`Applying styles to node: ${node.name}`, styles);
+
+  applyPositionToNode(node, parentFigmaNode, styles);
 
   try {
     // Common styles for all node types
     applyOpacityStyles(node, styles);
     applyTransformStyles(node, styles);
+    applySizeStyles(node, styles);
+    applyLayoutStyles(node, parentFigmaNode, styles);
+
 
     if (node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'COMPONENT') {
       // Apply container-specific styles
       applyBackgroundStyles(node, styles);
-      applyLayoutStyles(node, styles);
-      applyGeometryStyles(node, styles);
       applyAutoLayoutStyles(node, styles);
+      applyGeometryStyles(node, styles);
       applyBorderStyles(node, styles);
     } else if (node.type === 'TEXT') {
       await applyTextStyles(node, styles);
@@ -585,34 +593,121 @@ function applyGeometryStyles(node, styles) {
   }
 }
 
+function applyLayoutStyles(node, parentFigmaNode, styles) {
+  // Handle positioning
+  if (parentFigmaNode.layoutMode !== 'NONE') {
+    if (styles['position'] === 'absolute' || styles['position'] === 'relative') {
+      // Extract 'left' and 'top' positions
+      let x = parseNumericValue(styles['left']) || 0;
+      let y = parseNumericValue(styles['top']) || 0;
 
-function applyLayoutStyles(node, styles) {
-  applyPaddingStyles(node, styles);
-  // applyMarginStyles(node, styles);
-  if (styles['position'] === 'absolute') {
-    // In Figma, this corresponds to setting the node to absolute positioning
-    if ('layoutPositioning' in node) {
-      node.layoutPositioning = 'ABSOLUTE';
-    }
-    console.log(`Set node ${node.name} to absolute positioning.`);
-  } else {
-    // Ensure the node is set to normal positioning
-    if ('layoutPositioning' in node) {
-      node.layoutPositioning = 'AUTO'; // or 'NORMAL'
+      // Apply positions to the node
+      if ('x' in node && 'y' in node) {
+        node.x = x;
+        node.y = y;
+        console.log(`Set node ${node.name} position to x: ${x}, y: ${y}`);
+      } else {
+        console.warn(`Node ${node.name} does not support positioning.`);
+      }
+
+      // For absolute positioning within auto-layout frames
+      if (styles['position'] === 'absolute' && parentFigmaNode.layoutMode !== 'NONE') {
+        if ('layoutPositioning' in node) {
+          node.layoutPositioning = 'ABSOLUTE';
+          console.log(`Set node ${node.name} to absolute positioning.`);
+        }
+      }
     }
   }
 
+  // Handle display flex
   if (styles['display'] === 'flex') {
     const flexDirection = styles['flex-direction'] || 'row';
     node.layoutMode = flexDirection === 'column' ? 'VERTICAL' : 'HORIZONTAL';
     node.primaryAxisSizingMode = 'AUTO';
     node.counterAxisSizingMode = 'AUTO';
     console.log(`Set node to auto-layout with layoutMode: ${node.layoutMode}`);
-  } else if (styles['display']) {
+  } else {
     node.layoutMode = 'NONE';
     console.log(`Disabled auto-layout for node: ${node.name}`);
   }
 }
+
+// function parseNumericValue(value) {
+//   if (!value) return null;
+//   const match = value.match(/(-?\d+(\.\d+)?)(px|rem|em)?/);
+//   if (match) {
+//     return parseFloat(match[1]);
+//   }
+//   return null;
+// }
+
+function applySizeStyles(node, styles) {
+  let width = parseNumericValue(styles['width']) || node.width;
+  let height = parseNumericValue(styles['height']) || node.height;
+  
+  if ('resize' in node) {
+    node.resize(width, height);
+    console.log(`Resized node ${node.name} to width: ${width}, height: ${height}`);
+  }
+}
+
+function applyPositionToNode(node, parentFigmaNode, styles) {
+  const { x, y } = calculateNodePosition(node, parentFigmaNode, styles);
+  if ('x' in node && 'y' in node) {
+    node.x = x;
+    node.y = y;
+    console.log(`Set node ${node.name} position to x: ${x}, y: ${y}`);
+  }
+}
+
+function calculateNodePosition(node, parentFigmaNode, styles) {
+  let x = parseNumericValue(styles['left']) || 0;
+  let y = parseNumericValue(styles['top']) || 0;
+
+  // Add margins
+  let marginLeft = parseNumericValue(styles['margin-left']) || 0;
+  let marginTop = parseNumericValue(styles['margin-top']) || 0;
+
+  x += marginLeft;
+  y += marginTop;
+
+  // If the parent has a position, add it
+  if (parentFigmaNode && 'x' in parentFigmaNode && 'y' in parentFigmaNode) {
+    x += parentFigmaNode.x;
+    y += parentFigmaNode.y;
+  }
+
+  return { x, y };
+}
+
+// function applyLayoutStyles(node, parentLayoutMode, styles) {
+//   applyPaddingStyles(node, styles);
+
+//   if (styles['position'] === 'absolute' && parentLayoutMode !== "NONE") {
+//     // In Figma, this corresponds to setting the node to absolute positioning
+//     if ('layoutPositioning' in node ) {
+//       node.layoutPositioning = 'ABSOLUTE';
+//     }
+//     console.log(`Set node ${node.name} to absolute positioning.`);
+//   } else {
+//     // Ensure the node is set to normal positioning
+//     if ('layoutPositioning' in node) {
+//       node.layoutPositioning = 'AUTO'; // or 'NORMAL'
+//     }
+//   }
+
+//   if (styles['display'] === 'flex') {
+//     const flexDirection = styles['flex-direction'] || 'row';
+//     node.layoutMode = flexDirection === 'column' ? 'VERTICAL' : 'HORIZONTAL';
+//     node.primaryAxisSizingMode = 'AUTO';
+//     node.counterAxisSizingMode = 'AUTO';
+//     console.log(`Set node to auto-layout with layoutMode: ${node.layoutMode}`);
+//   } else if (styles['display']) {
+//     node.layoutMode = 'NONE';
+//     console.log(`Disabled auto-layout for node: ${node.name}`);
+//   }
+// }
 
 function applyPaddingStyles(node, styles) {
   if (node.type !== 'FRAME') {
@@ -999,7 +1094,7 @@ async function createButtonComponent(buttonToken) {
   await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
   
   text.characters = name || 'Button';
-  await applyStylesToFigmaNode(text, value);
+  await applyStylesToFigmaNode(text, null, value);
   component.appendChild(text);
 
   text.x = rect.x + rect.width / 2 - text.width / 2;
