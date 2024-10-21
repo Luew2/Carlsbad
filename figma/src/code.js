@@ -4,11 +4,48 @@ const css = require('css');
 const domSerializer = require('dom-serializer').default;
 const Color = require('color');
 
+// Build a map from element IDs to positions
+function buildElementMap(elementNode, map = {}) {
+  if (elementNode.id) {
+    map[elementNode.id] = elementNode;
+  }
+  if (elementNode.children && elementNode.children.length > 0) {
+    for (const child of elementNode.children) {
+      buildElementMap(child, map);
+    }
+  }
+  return map;
+}
+
+// Augment domNodes with position data based on IDs
+function augmentDomWithPositions(domNode, elementMap) {
+  if (domNode.attribs && domNode.attribs.id) {
+    const id = domNode.attribs.id;
+    const elementNode = elementMap[id];
+    if (elementNode) {
+      domNode.x = elementNode.x;
+      domNode.y = elementNode.y;
+      domNode.width = elementNode.width;
+      domNode.height = elementNode.height;
+    }
+  }
+  // Traverse children
+  if (domNode.children && domNode.children.length > 0) {
+    for (const child of domNode.children) {
+      augmentDomWithPositions(child, elementMap);
+    }
+  }
+}
+
 // Main component creation function
 async function createFigmaComponentFromData(componentData, position = { x: 0, y: 0 }) {
-  const { html, css: cssText, name } = componentData;
+  const { html, css: cssText, name, elementTree } = componentData;
   const cssStyles = parseCSS(cssText);
   const dom = htmlparser2.parseDocument(html);
+
+  const elementMap = buildElementMap(elementTree);
+
+  augmentDomWithPositions(dom, elementMap);
 
   const frame = figma.createFrame();
   frame.name = name || 'Component';
@@ -65,7 +102,6 @@ function parseCSS(cssText) {
 
 
 // HTML to Figma node mapping
-// HTML to Figma node mapping
 function createFigmaNodeForHTML(tagName) {
   console.log(`Handling HTML element: ${tagName}`);
   let figmaNode;
@@ -75,14 +111,8 @@ function createFigmaNodeForHTML(tagName) {
 
   if (blockElements.includes(tagName)) {
     figmaNode = figma.createFrame();
-    figmaNode.layoutMode = 'VERTICAL';
-    figmaNode.primaryAxisSizingMode = 'AUTO';
-    figmaNode.counterAxisSizingMode = 'AUTO';
   } else if (inlineElements.includes(tagName)) {
     figmaNode = figma.createFrame();
-    figmaNode.layoutMode = 'HORIZONTAL';
-    figmaNode.primaryAxisSizingMode = 'AUTO';
-    figmaNode.counterAxisSizingMode = 'AUTO';
   } else if (tagName === 'img') {
     figmaNode = figma.createRectangle();
     figmaNode.name = 'Image';
@@ -90,10 +120,6 @@ function createFigmaNodeForHTML(tagName) {
     figmaNode = null;
   } else {
     figmaNode = figma.createFrame();
-     // Default to auto-layout for other elements
-     figmaNode.layoutMode = 'VERTICAL';
-     figmaNode.primaryAxisSizingMode = 'AUTO';
-     figmaNode.counterAxisSizingMode = 'AUTO';
   }
 
   if (figmaNode) {
@@ -139,14 +165,37 @@ async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles 
     if (figmaNode) {
       const combinedStyles = { ...parentStyles, ...nodeStyles };
 
+      // Apply position from JSON data
+      let relativeX = 0;
+      let relativeY = 0;
+      if (domNode.x !== undefined && domNode.y !== undefined) {
+        if (parentFigmaNode.layoutMode !== 'NONE') {
+          figmaNode.layoutPositioning = 'ABSOLUTE';
+        }
+        console.log(domNode.x, domNode.y)
+        console.log(parentFigmaNode.absoluteTransform)
+        relativeX = domNode.x - (parentFigmaNode.absoluteTransform[0][2] || 0);
+        relativeY = domNode.y - (parentFigmaNode.absoluteTransform[1][2] || 0);
+        console.log(relativeX, relativeY)
+        figmaNode.x = Math.max(0, relativeX);
+        figmaNode.y = Math.max(0, relativeY);
+        
+        console.log(`${indent}Set node position to x: ${figmaNode.x}, y: ${figmaNode.y}`);
+      }
+
       if (figmaNode.type === 'TEXT') {
         await setTextNodeContent(figmaNode, domNode, combinedStyles);
         await applyTextStyles(figmaNode, combinedStyles);
       } else {
         await applyStylesToFigmaNode(figmaNode, parentFigmaNode, combinedStyles);
-        // applyAutoLayoutStyles(figmaNode, combinedStyles);
-
+        
         if (figmaNode.type === 'FRAME') {
+          if (figmaNode.x === 0 && figmaNode.y === 0) {
+            figmaNode.layoutMode = 'VERTICAL';
+            figmaNode.primaryAxisSizingMode = 'AUTO';
+            figmaNode.counterAxisSizingMode = 'AUTO';
+            figmaNode.clipsContent = false;
+          }
           if (domNode.children && domNode.children.length > 0) {
             console.log(`${indent}Processing ${domNode.children.length} children of Frame node at depth ${depth}`);
             for (const childNode of domNode.children) {
@@ -158,18 +207,25 @@ async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles 
     }
   } else if (domNode.type === 'text') {
     const textContent = domNode.data.trim();
-    console.log(`${indent}Text content: "${textContent}"`);
     if (textContent) {
       figmaNode = figma.createText();
-      console.log(`${indent}Created Text node for text content`);
       const combinedStyles = { ...parentStyles };
       await setTextNodeContent(figmaNode, domNode, combinedStyles);
       await applyTextStyles(figmaNode, combinedStyles);
+      await applyStylesToFigmaNode(figmaNode, parentFigmaNode, combinedStyles);
       parentFigmaNode.appendChild(figmaNode);
+
+      // Apply position from JSON data
+      let relativeX = 0;
+      let relativeY = 0;
+      if (domNode.x !== undefined && domNode.y !== undefined) {
+        relativeX = domNode.x - (parentFigmaNode.absoluteTransform[0][2] || 0);
+        relativeY = domNode.y - (parentFigmaNode.absoluteTransform[1][2] || 0);
+        figmaNode.x = Math.max(0, relativeX);
+        figmaNode.y = Math.max(0, relativeY);
+      }
     }
   }
-
-
 }
 
 
@@ -273,7 +329,7 @@ function applyFillToVectorNodes(node, fillColor) {
 }
 
 async function setTextNodeContent(textNode, domNode, styles) {
-  let fontFamily = parseFontFamily(styles['font-family']);
+  let fontFamily = parseFontFamily(styles['font-family'] || '');
   let fontStyleCSS = styles['font-style'] || '';
   let fontWeight = styles['font-weight'] || '400'; // Default to 400 (Regular)
 
@@ -288,7 +344,7 @@ async function setTextNodeContent(textNode, domNode, styles) {
     textNode.fontName = fontName;
     console.log(`Set font: ${fontName.family} ${fontName.style}`);
   } catch (error) {
-    console.error(`Failed to load font: ${fontName.family} ${fontName.style}`, error);
+    // console.warn(`Failed to load font: ${fontName.family} ${fontName.style}`, error);
 
     // Fallback to default font
     fontName = { family: 'Arial', style: 'Regular' };
@@ -303,21 +359,14 @@ async function setTextNodeContent(textNode, domNode, styles) {
 }
 
 function parseFontFamily(fontFamilyString) {
-  if (!fontFamilyString) return 'Arial';
+  console.log("Parsing font family:", fontFamilyString);
+  if (!fontFamilyString) return ['Arial'];
 
   // Split the fontFamilyString by commas to handle multiple fonts
-  const fontFamilies = fontFamilyString.split(',');
+  const fontFamilies = fontFamilyString.split(',').map(family => family.replace(/['"]/g, '').trim());
 
-  for (let family of fontFamilies) {
-    // Remove any quotes and trim whitespace
-    family = family.replace(/['"]/g, '').trim();
-
-    // Return the first non-empty font family
-    if (family) return family;
-  }
-
-  // Fallback to 'Arial' if no valid fonts are found
-  return 'Arial';
+  // Filter out any empty strings
+  return fontFamilies.filter(family => family.length > 0) || ['Arial'];
 }
 
 function mapFontWeightToFigmaStyle(fontStyle, fontWeight) {
@@ -375,7 +424,7 @@ async function loadFont(fontName) {
     loadedFonts.add(fontKey);
     console.log(`Loaded font: ${fontKey}`);
   } catch (error) {
-    console.error(`Failed to load font: ${fontKey}`, error);
+    console.warn(error)
     throw error;
   }
 }
@@ -438,7 +487,7 @@ function mapAlignItems(value) {
 function getNodeStyles(domNode, cssStyles) {
   console.log(`Fetching styles for node: ${domNode.name}`);
   console.log(`CSS Styles:`, cssStyles);
-  const styles = {};
+  let styles = {};
   const selectors = getSelectorsForNode(domNode);
   console.log(`Fetching styles for node: ${domNode.name}, Selectors:`, selectors);
 
@@ -450,6 +499,15 @@ function getNodeStyles(domNode, cssStyles) {
       console.log(`Applied styles from selector: ${selector}`, cssStyles[selector]);
     }
   }
+
+  if (styles['font']) {
+    const fontProperties = parseFontShorthand(styles['font']);
+    styles = {
+      ...styles,
+      ...fontProperties,
+    };
+  }
+
 
   return styles;
 }
@@ -487,19 +545,18 @@ function getSelectorsForNode(domNode) {
 async function applyStylesToFigmaNode(node, parentFigmaNode, styles) {
   console.log(`Applying styles to node: ${node.name}`, styles);
 
-  applyPositionToNode(node, parentFigmaNode, styles);
+  // applyPositionToNode(node, parentFigmaNode, styles);
 
   try {
     // Common styles for all node types
     applyOpacityStyles(node, styles);
     applyTransformStyles(node, styles);
     applySizeStyles(node, styles);
-    applyLayoutStyles(node, parentFigmaNode, styles);
-
 
     if (node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'COMPONENT') {
       // Apply container-specific styles
       applyBackgroundStyles(node, styles);
+      applyLayoutStyles(node, parentFigmaNode, styles);
       applyAutoLayoutStyles(node, styles);
       applyGeometryStyles(node, styles);
       applyBorderStyles(node, styles);
@@ -593,45 +650,96 @@ function applyGeometryStyles(node, styles) {
   }
 }
 
-function applyLayoutStyles(node, parentFigmaNode, styles) {
-  // Handle positioning
-  if (parentFigmaNode.layoutMode !== 'NONE') {
-    if (styles['position'] === 'absolute' || styles['position'] === 'relative') {
-      // Extract 'left' and 'top' positions
-      let x = parseNumericValue(styles['left']) || 0;
-      let y = parseNumericValue(styles['top']) || 0;
-
-      // Apply positions to the node
-      if ('x' in node && 'y' in node) {
-        node.x = x;
-        node.y = y;
-        console.log(`Set node ${node.name} position to x: ${x}, y: ${y}`);
-      } else {
-        console.warn(`Node ${node.name} does not support positioning.`);
-      }
-
-      // For absolute positioning within auto-layout frames
-      if (styles['position'] === 'absolute' && parentFigmaNode.layoutMode !== 'NONE') {
-        if ('layoutPositioning' in node) {
-          node.layoutPositioning = 'ABSOLUTE';
-          console.log(`Set node ${node.name} to absolute positioning.`);
-        }
-      }
-    }
-  }
-
-  // Handle display flex
+function applyLayoutStyles(node, styles) {
+  console.log("applying layout styles to", node)
+  // Check if display is flex
   if (styles['display'] === 'flex') {
+    // Determine the flex direction
     const flexDirection = styles['flex-direction'] || 'row';
     node.layoutMode = flexDirection === 'column' ? 'VERTICAL' : 'HORIZONTAL';
-    node.primaryAxisSizingMode = 'AUTO';
-    node.counterAxisSizingMode = 'AUTO';
+
+    // Handle alignment
+    const alignItems = styles['align-items'] || 'stretch';
+    const justifyContent = styles['justify-content'] || 'flex-start';
+
+    // Map CSS align-items to Figma counter axis alignment
+    const counterAxisAlignMap = {
+      'flex-start': 'MIN',
+      'flex-end': 'MAX',
+      'center': 'CENTER',
+      'stretch': 'STRETCH',
+      'baseline': 'MIN', // Figma doesn't support baseline alignment directly
+    };
+
+    // Map CSS justify-content to Figma primary axis alignment
+    const primaryAxisAlignMap = {
+      'flex-start': 'MIN',
+      'flex-end': 'MAX',
+      'center': 'CENTER',
+      'space-between': 'SPACE_BETWEEN',
+      'space-around': 'SPACE_AROUND',
+      'space-evenly': 'SPACE_BETWEEN', // Adjust if needed
+    };
+
+    if ('primaryAxisAlignItems' in node) {
+      node.primaryAxisAlignItems = primaryAxisAlignMap[justifyContent] || 'MIN';
+    }
+    if ('counterAxisAlignItems' in node) {
+      node.counterAxisAlignItems = counterAxisAlignMap[alignItems] || 'MIN';
+    }
+
+    // Handle gap (spacing between items)
+    if (styles['gap']) {
+      node.itemSpacing = parseNumericValue(styles['gap']) || 0;
+    } else if (styles['column-gap'] || styles['row-gap']) {
+      // For flex-direction: row, use column-gap; for column, use row-gap
+      if (node.layoutMode === 'HORIZONTAL' && styles['column-gap']) {
+        node.itemSpacing = parseNumericValue(styles['column-gap']) || 0;
+      } else if (node.layoutMode === 'VERTICAL' && styles['row-gap']) {
+        node.itemSpacing = parseNumericValue(styles['row-gap']) || 0;
+      }
+    }
+
     console.log(`Set node to auto-layout with layoutMode: ${node.layoutMode}`);
+    console.log(`primaryAxisAlignItems: ${node.primaryAxisAlignItems}`);
+    console.log(`counterAxisAlignItems: ${node.counterAxisAlignItems}`);
   } else {
     node.layoutMode = 'NONE';
     console.log(`Disabled auto-layout for node: ${node.name}`);
   }
+
+  // Apply padding and margin
+  applyPaddingStyles(node, styles);
+  applyMarginStyles(node, styles);
 }
+
+// function applyLayoutStyles(node, parentFigmaNode, styles) {
+//   // Handle positioning
+//   if (parentFigmaNode.layoutMode !== 'NONE') {
+//     if (styles['position'] === 'absolute' || styles['position'] === 'relative') {
+//       // Extract 'left' and 'top' positions
+//       let x = parseNumericValue(styles['left']) || 0;
+//       let y = parseNumericValue(styles['top']) || 0;
+
+//       // Apply positions to the node
+//       if ('x' in node && 'y' in node) {
+//         node.x = x;
+//         node.y = y;
+//         console.log(`Set node ${node.name} position to x: ${x}, y: ${y}`);
+//       } else {
+//         console.warn(`Node ${node.name} does not support positioning.`);
+//       }
+
+//       // For absolute positioning within auto-layout frames
+//       if (styles['position'] === 'absolute' && parentFigmaNode.layoutMode !== 'NONE') {
+//         if ('layoutPositioning' in node) {
+//           node.layoutPositioning = 'ABSOLUTE';
+//           console.log(`Set node ${node.name} to absolute positioning.`);
+//         }
+//       }
+//     }
+//   }
+
 
 // function parseNumericValue(value) {
 //   if (!value) return null;
@@ -764,34 +872,118 @@ function applyMarginStyles(node, styles) {
   }
 }
 
-async function applyTextStyles(node, styles) {
-  // Set font size
-  if (styles['font-size']) {
-    node.fontSize = parseNumericValue(styles['font-size']) || 12;
-    console.log(`Set font size to: ${node.fontSize}`);
+/**
+ * Parses a CSS font shorthand property into its individual components using named capturing groups.
+ *
+ * @param {string} fontValue - The font shorthand string to parse.
+ * @returns {Object} An object containing the parsed font properties.
+ */
+/**
+ * Parses a CSS font shorthand property into its individual components using named capturing groups.
+ *
+ * @param {string} fontValue - The font shorthand string to parse.
+ * @returns {Object} An object containing the parsed font properties.
+ */
+function parseFontShorthand(fontValue) {
+  const fontProperties = {};
+
+  console.log("Received font value:", fontValue);
+
+  // Validate that fontValue is a string
+  if (typeof fontValue !== 'string') {
+    console.warn("Invalid font value provided. Expected a string, received:", typeof fontValue);
+    // Set default values if fontValue is not a string
+    fontProperties['font-style'] = 'normal';
+    fontProperties['font-variant'] = 'normal';
+    fontProperties['font-weight'] = '400';
+    fontProperties['font-size'] = '16px';
+    fontProperties['line-height'] = 'normal';
+    fontProperties['font-family'] = 'Arial';
+    return fontProperties;
   }
 
-  // Parse font family
-  let fontFamily = parseFontFamily(styles['font-family']);
-  // Map font-weight and font-style to Figma font style
-  let fontStyleCSS = styles['font-style'] || ''; // e.g., 'italic'
-  let fontWeight = styles['font-weight'] || '400'; // e.g., 'bold' or '700'
-  let figmaFontStyle = mapFontWeightToFigmaStyle(fontStyleCSS, fontWeight);
-  let fontName = { family: fontFamily, style: figmaFontStyle };
+  // Remove extra spaces and normalize whitespace
+  fontValue = fontValue.trim().replace(/\s+/g, ' ');
 
-  console.log(`Attempting to load font: ${fontName.family} ${fontName.style}`);
-  try {
-    await loadFont(fontName);
-    node.fontName = fontName;
-    console.log(`Set font to: ${fontName.family} ${fontName.style}`);
-  } catch (error) {
-    console.error(`Failed to load font: ${fontName.family} ${fontName.style}`, error);
-    // Fallback to default font
+  console.log("Normalized font value:", fontValue);
+
+  // Regular expression with named capturing groups and optional spaces around '/'
+  const fontRegex = /^(?:(?<fontStyle>italic|oblique|normal)\s+)?(?:(?<fontVariant>small-caps)\s+)?(?:(?<fontWeight>normal|bold|bolder|lighter|\d{3})\s+)?(?:(?<fontSize>\d+(\.\d+)?(?:px|pt|em|rem|%)?)(?:\s*\/\s*(?<lineHeight>\d+(\.\d+)?(?:px|pt|em|rem|%)?))?\s+)(?<fontFamily>[\s\S]+)$/iu;
+
+  const matches = fontValue.match(fontRegex);
+
+  console.log("Regex matches:", matches);
+
+  if (matches && matches.groups) {
+    const groups = matches.groups;
+    fontProperties['font-style'] = groups.fontStyle || 'normal';
+    fontProperties['font-variant'] = groups.fontVariant || 'normal';
+    fontProperties['font-weight'] = groups.fontWeight || '400';
+    fontProperties['font-size'] = groups.fontSize || '16px';
+    fontProperties['line-height'] = groups.lineHeight || 'normal';
+    // Remove trailing semicolon and any surrounding quotes/spaces
+    fontProperties['font-family'] = groups.fontFamily.trim().replace(/;$/, '') || 'Arial';
+  } else {
+    console.warn("Failed to parse font shorthand:", fontValue);
+    // Set default values if parsing fails
+    fontProperties['font-style'] = 'normal';
+    fontProperties['font-variant'] = 'normal';
+    fontProperties['font-weight'] = '400';
+    fontProperties['font-size'] = '16px';
+    fontProperties['line-height'] = 'normal';
+    fontProperties['font-family'] = 'Arial';
+  }
+
+  console.log("Parsed font properties:", fontProperties);
+  return fontProperties;
+}
+
+
+
+  async function applyTextStyles(node, styles) {
+    // Set font size
+    if (styles['font-size']) {
+      node.fontSize = parseNumericValue(styles['font-size']) || 12;
+      console.log(`Set font size to: ${node.fontSize}`);
+    }
+
+    // Parse font family into an array for fallback
+    const fontFamilies = parseFontFamily(styles['font-family']);
+    const fontStyleCSS = styles['font-style'] || 'normal'; // e.g., 'italic'
+    const fontWeight = styles['font-weight'] || '400'; // e.g., 'bold' or '700'
+
+    console.log(`Parsed font families: ${fontFamilies.join(', ')}`);
+    console.log(`Font style: ${fontStyleCSS}, Font weight: ${fontWeight}`);
+
+    // Iterate through font families and attempt to load each
+    for (let fontFamily of fontFamilies) {
+      const figmaFontStyle = mapFontWeightToFigmaStyle(fontStyleCSS, fontWeight);
+      const fontName = { family: fontFamily, style: figmaFontStyle };
+
+      console.log(`Attempting to load font: ${fontName.family} ${fontName.style}`);
+      try {
+        await loadFont(fontName);
+        node.fontName = fontName;
+        console.log(`Set font to: ${fontName.family} ${fontName.style}`);
+        break; // Exit after successfully loading a font
+      } catch (error) {
+        // console.warn(`Failed to load font: ${fontName.family} ${fontName.style}. Trying next font in the list.`);
+        // Continue to the next font in the list
+      }
+    }
+
+    // If all fonts fail to load, fallback to Arial
     const fallbackFont = { family: 'Arial', style: 'Regular' };
-    await loadFont(fallbackFont);
-    node.fontName = fallbackFont;
-    console.log(`Fallback to default font: ${fallbackFont.family} ${fallbackFont.style}`);
-  }
+    try {
+      console.warn(`Attempting to load fallback font: ${fallbackFont.family} ${fallbackFont.style}`);
+      await loadFont(fallbackFont);
+      node.fontName = fallbackFont;
+      console.log(`Fallback to default font: ${fallbackFont.family} ${fallbackFont.style}`);
+    } catch (error) {
+      console.error(`Failed to load fallback font: ${fallbackFont.family} ${fallbackFont.style}`, error);
+      // Optionally, handle the scenario where even the fallback font fails to load
+    }
+  
 
   // Set text color
   if (styles['color']) {
@@ -806,6 +998,23 @@ async function applyTextStyles(node, styles) {
     node.textAlignHorizontal = alignmentMap[styles['text-align']] || 'LEFT';
     console.log(`Set text alignment to: ${node.textAlignHorizontal}`);
   }
+
+   // Set vertical text alignment
+   let verticalAlign = styles['vertical-align'] || styles['align-items'];
+   if (verticalAlign) {
+     const verticalAlignmentMap = {
+       'top': 'TOP',
+       'center': 'CENTER',
+       'bottom': 'BOTTOM',
+       'flex-start': 'TOP',
+       'flex-end': 'BOTTOM',
+       'stretch': 'TOP', // 'stretch' doesn't have a direct equivalent; defaulting to 'TOP'
+     };
+     node.textAlignVertical = verticalAlignmentMap[verticalAlign] || 'TOP';
+     console.log(`Set text vertical alignment to: ${node.textAlignVertical}`);
+   } else {
+     node.textAlignVertical = 'TOP'; // Default alignment
+   }
 
   // Set line height
   if (styles['line-height']) {
@@ -868,11 +1077,15 @@ function applyTransformStyles(node, styles) {
 
 function applyOpacityStyles(node, styles) {
   if (styles['opacity']) {
-    const opacityValue = parseFloat(styles['opacity']);
-    if (opacityValue >= 0 && opacityValue <= 1) {
-      node.opacity = opacityValue;
-    } else {
-      console.warn(`Invalid opacity value: ${opacityValue}. Must be between 0 and 1.`);
+    try {
+      const opacityValue = parseFloat(styles['opacity']);
+      if (opacityValue >= 0 && opacityValue <= 1) {
+        node.opacity = opacityValue;
+      } else {
+        console.warn(`Invalid opacity value: ${opacityValue}. Must be between 0 and 1.`);
+      }
+    } catch (error) {
+      console.error(`Error setting opacity for node: ${node.name}`, error);
     }
   }
 }
@@ -1037,30 +1250,30 @@ async function importColors(colors) {
   }
 }
 
-async function importFonts(fonts) {
-  const loadedFonts = new Set();
-  for (const fontToken of fonts) {
-    const fontFamily = fontToken.value;
-    const fontStyle = fontToken.style || 'Regular';
+// async function importFonts(fonts) {
+//   const loadedFonts = new Set();
+//   for (const fontToken of fonts) {
+//     const fontFamily = fontToken.value;
+//     const fontStyle = fontToken.style || 'Regular';
     
-    const fontKey = `${fontFamily}-${fontStyle}`;
-    if (!loadedFonts.has(fontKey)) {
-      try {
-        await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
-        loadedFonts.add(fontKey);
-        console.log(`Loaded font: ${fontFamily} ${fontStyle}`);
-      } catch (error) {
-        console.error(`Failed to load font: ${fontFamily} ${fontStyle}`, error);
-      }
-    } else {
-      console.log(`Font already loaded: ${fontFamily} ${fontStyle}`);
-    }
+//     const fontKey = `${fontFamily}-${fontStyle}`;
+//     if (!loadedFonts.has(fontKey)) {
+//       try {
+//         await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
+//         loadedFonts.add(fontKey);
+//         console.log(`Loaded font: ${fontFamily} ${fontStyle}`);
+//       } catch (error) {
+//         // console.warn(`Failed to load font: ${fontFamily} ${fontStyle}`, error);
+//       }
+//     } else {
+//       console.log(`Font already loaded: ${fontFamily} ${fontStyle}`);
+//     }
 
-    const textStyle = figma.createTextStyle();
-    textStyle.name = fontToken.name || `${fontFamily} ${fontStyle}`;
-    textStyle.fontName = { family: fontFamily, style: fontStyle };
-  }
-}
+//     const textStyle = figma.createTextStyle();
+//     textStyle.name = fontToken.name || `${fontFamily} ${fontStyle}`;
+//     textStyle.fontName = { family: fontFamily, style: fontStyle };
+//   }
+// }
 
 async function importButtons(buttons) {
   for (const buttonToken of buttons) {
