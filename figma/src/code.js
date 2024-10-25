@@ -53,10 +53,6 @@ async function createFigmaComponentFromData(componentData, position = { x: 0, y:
   frame.x = position.x;
   frame.y = position.y;
 
-  // Set the layout mode and sizing modes for auto-layout
-  frame.layoutMode = 'VERTICAL';
-  frame.primaryAxisSizingMode = 'AUTO';
-  frame.counterAxisSizingMode = 'AUTO';
   frame.clipsContent = false; // Prevent content from being clipped
 
   console.log(`Creating component: ${frame.name}`);
@@ -132,8 +128,32 @@ function createFigmaNodeForHTML(tagName) {
 }
 
 // Main DOM processing function
-async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles = {}, depth = 0, parentLayoutMode = 'NONE') {
+async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles = {}, depth = 0, parentLayoutMode = 'NONE', parentIsHidden = false) {
   if (!domNode) return;
+
+
+  // Get the styles for the domNode
+  const styles = getNodeStyles(domNode, cssStyles);
+  
+  // Check if the node should be visually hidden
+  const nodeIsHidden = isVisuallyHidden(styles) || styles['display'] === 'none' || styles['visibility'] === 'hidden';
+
+  if (parentIsHidden && domNode.type === 'text') {
+    console.log(`${indent}Skipping text node due to hidden parent at depth ${depth}`);
+    return;
+  }
+
+  if (nodeIsHidden) {
+    // Skip creating this node and process its children
+    if (domNode.children && domNode.children.length > 0) {
+      console.log(`${indent}Processing ${domNode.children.length} children of Frame node at depth ${depth}`);
+      for (const childNode of domNode.children) {
+
+        await processDomNode(childNode, parentFigmaNode, cssStyles, parentStyles, depth + 1, parentLayoutMode, parentIsHidden = true);
+      }
+    }
+    return;
+  }
 
   const indent = '  '.repeat(depth);
   console.log(`${indent}Processing DOM node at depth ${depth}:`, domNode);
@@ -149,7 +169,8 @@ async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles 
     if (tagName === 'svg') {
       figmaNode = await handleSVGElement(domNode, cssStyles);
     } else if (tagName === 'img') {
-      figmaNode = await handleImageNode(domNode);
+      figmaNode = await handleImageNode(domNode, parentFigmaNode);
+      return;
     } else {
       figmaNode = createFigmaNodeForHTML(tagName);
     }
@@ -190,12 +211,6 @@ async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles 
         await applyStylesToFigmaNode(figmaNode, parentFigmaNode, combinedStyles);
         
         if (figmaNode.type === 'FRAME') {
-          if (figmaNode.x === 0 && figmaNode.y === 0) {
-            figmaNode.layoutMode = 'VERTICAL';
-            figmaNode.primaryAxisSizingMode = 'AUTO';
-            figmaNode.counterAxisSizingMode = 'AUTO';
-            figmaNode.clipsContent = false;
-          }
           if (domNode.children && domNode.children.length > 0) {
             console.log(`${indent}Processing ${domNode.children.length} children of Frame node at depth ${depth}`);
             for (const childNode of domNode.children) {
@@ -227,7 +242,6 @@ async function processDomNode(domNode, parentFigmaNode, cssStyles, parentStyles 
     }
   }
 }
-
 
 // Style parsing and application functions
 function parsePadding(padding) {
@@ -430,6 +444,7 @@ async function loadFont(fontName) {
 }
 
 function applyAutoLayoutStyles(node, styles) {
+
   if (node.type !== 'FRAME') return;
 
   if (styles['display'] === 'flex') {
@@ -542,38 +557,62 @@ function getSelectorsForNode(domNode) {
   return selectors;
 }
 
+function isVisuallyHidden(styles) {
+  // Check for common techniques used to hide elements visually
+  const hiddenByClip = styles['clip'] === 'rect(0px, 0px, 0px, 0px)' || styles['clip'] === 'rect(0, 0, 0, 0)';
+  const hiddenByClipPath = styles['clip-path'] && styles['clip-path'].includes('inset(50%');
+  const hiddenBySize = (parseFloat(styles['width']) === 0 || parseFloat(styles['height']) === 0 ||
+                        parseFloat(styles['width']) === 1 || parseFloat(styles['height']) === 1);
+  const hiddenByOpacity = styles['opacity'] === '0';
+  const hiddenByOverflow = styles['overflow'] === 'hidden' && hiddenBySize;
+  const hiddenByPosition = styles['position'] === 'absolute' && hiddenBySize;
+
+  // Additional checks
+  const visibilityHidden = styles['visibility'] === 'hidden';
+  const displayNone = styles['display'] === 'none';
+
+  return (
+    hiddenByClip ||
+    hiddenByClipPath ||
+    (hiddenByOverflow && hiddenBySize) ||
+    (hiddenByPosition && hiddenBySize) ||
+    hiddenByOpacity ||
+    visibilityHidden ||
+    displayNone
+  );
+}
+
 async function applyStylesToFigmaNode(node, parentFigmaNode, styles) {
   console.log(`Applying styles to node: ${node.name}`, styles);
 
-  // applyPositionToNode(node, parentFigmaNode, styles);
-
   try {
-    // Common styles for all node types
-    applyOpacityStyles(node, styles);
-    applyTransformStyles(node, styles);
-    applySizeStyles(node, styles);
+      // Common styles for all node types
+      applyOpacityStyles(node, styles);
+      applyTransformStyles(node, styles);
+      applySizeStyles(node, styles);
 
-    if (node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'COMPONENT') {
-      // Apply container-specific styles
-      applyBackgroundStyles(node, styles);
-      applyLayoutStyles(node, parentFigmaNode, styles);
-      applyAutoLayoutStyles(node, styles);
-      applyGeometryStyles(node, styles);
-      applyBorderStyles(node, styles);
-    } else if (node.type === 'TEXT') {
-      await applyTextStyles(node, styles);
-    } else if (node.type === 'VECTOR') {
-      applyVectorStyles(node, styles);
-    } else {
-      // Apply general styles for other node types
-      applyBackgroundStyles(node, styles);
-      applyGeometryStyles(node, styles);
-      applyBorderStyles(node, styles);
-    }
+      // Node-type-specific styles
+      if (node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'COMPONENT') {
+        applyBackgroundStyles(node, styles);
+        applyLayoutStyles(node, parentFigmaNode, styles);
+        applyAutoLayoutStyles(node, styles);
+        applyGeometryStyles(node, styles);
+        applyBorderStyles(node, styles);
+      } else if (node.type === 'TEXT') {
+        await applyTextStyles(node, styles);
+      } else if (node.type === 'VECTOR') {
+        applyVectorStyles(node, styles);
+      } else {
+        // Apply general styles for other node types
+        applyBackgroundStyles(node, styles);
+        applyGeometryStyles(node, styles);
+        applyBorderStyles(node, styles);
+      }
   } catch (error) {
     console.error(`Error applying styles to node: ${node.name}`, error);
   }
 }
+
 
 function applyVectorStyles(node, styles) {
   if (styles['fill']) {
@@ -595,6 +634,12 @@ function applyVectorStyles(node, styles) {
 }
 
 function applyBackgroundStyles(node, styles) {
+
+  if (!('fills' in node)) {
+    console.warn(`Node type '${node.type}' does not support fills. Skipping background styles for node: ${node.name}`);
+    return;
+  }
+
   if (styles['background']) {
     const { color, opacity } = extractColorFromBackground(styles['background']);
     if (color) {
@@ -613,6 +658,11 @@ function applyBackgroundStyles(node, styles) {
 
 
 function applyGeometryStyles(node, styles) {
+  if (node.name.toLowerCase().includes('svg') || node.name.toLowerCase().includes('image')) {
+    console.warn(`Node type '${node.name}' contains 'svg' or 'image'. Skipping geometry styles for node: ${node.name}`);
+    return;
+  } 
+
   if (styles['border-radius']) {
     node.cornerRadius = parseNumericValue(styles['border-radius']) || 0;
     console.log(`Set border radius to:`, node.cornerRadius);
@@ -651,6 +701,10 @@ function applyGeometryStyles(node, styles) {
 }
 
 function applyLayoutStyles(node, styles) {
+  if (node.name.toLowerCase().includes('svg') || node.name.toLowerCase().includes('image')) {
+    console.warn(`Node type '${node.name}' contains 'svg' or 'image'. Skipping layout styles for node: ${node.name}`);
+    return;
+  } 
   console.log("applying layout styles to", node)
   // Check if display is flex
   if (styles['display'] === 'flex') {
@@ -713,43 +767,6 @@ function applyLayoutStyles(node, styles) {
   applyMarginStyles(node, styles);
 }
 
-// function applyLayoutStyles(node, parentFigmaNode, styles) {
-//   // Handle positioning
-//   if (parentFigmaNode.layoutMode !== 'NONE') {
-//     if (styles['position'] === 'absolute' || styles['position'] === 'relative') {
-//       // Extract 'left' and 'top' positions
-//       let x = parseNumericValue(styles['left']) || 0;
-//       let y = parseNumericValue(styles['top']) || 0;
-
-//       // Apply positions to the node
-//       if ('x' in node && 'y' in node) {
-//         node.x = x;
-//         node.y = y;
-//         console.log(`Set node ${node.name} position to x: ${x}, y: ${y}`);
-//       } else {
-//         console.warn(`Node ${node.name} does not support positioning.`);
-//       }
-
-//       // For absolute positioning within auto-layout frames
-//       if (styles['position'] === 'absolute' && parentFigmaNode.layoutMode !== 'NONE') {
-//         if ('layoutPositioning' in node) {
-//           node.layoutPositioning = 'ABSOLUTE';
-//           console.log(`Set node ${node.name} to absolute positioning.`);
-//         }
-//       }
-//     }
-//   }
-
-
-// function parseNumericValue(value) {
-//   if (!value) return null;
-//   const match = value.match(/(-?\d+(\.\d+)?)(px|rem|em)?/);
-//   if (match) {
-//     return parseFloat(match[1]);
-//   }
-//   return null;
-// }
-
 function applySizeStyles(node, styles) {
   let width = parseNumericValue(styles['width']) || node.width;
   let height = parseNumericValue(styles['height']) || node.height;
@@ -788,34 +805,6 @@ function calculateNodePosition(node, parentFigmaNode, styles) {
 
   return { x, y };
 }
-
-// function applyLayoutStyles(node, parentLayoutMode, styles) {
-//   applyPaddingStyles(node, styles);
-
-//   if (styles['position'] === 'absolute' && parentLayoutMode !== "NONE") {
-//     // In Figma, this corresponds to setting the node to absolute positioning
-//     if ('layoutPositioning' in node ) {
-//       node.layoutPositioning = 'ABSOLUTE';
-//     }
-//     console.log(`Set node ${node.name} to absolute positioning.`);
-//   } else {
-//     // Ensure the node is set to normal positioning
-//     if ('layoutPositioning' in node) {
-//       node.layoutPositioning = 'AUTO'; // or 'NORMAL'
-//     }
-//   }
-
-//   if (styles['display'] === 'flex') {
-//     const flexDirection = styles['flex-direction'] || 'row';
-//     node.layoutMode = flexDirection === 'column' ? 'VERTICAL' : 'HORIZONTAL';
-//     node.primaryAxisSizingMode = 'AUTO';
-//     node.counterAxisSizingMode = 'AUTO';
-//     console.log(`Set node to auto-layout with layoutMode: ${node.layoutMode}`);
-//   } else if (styles['display']) {
-//     node.layoutMode = 'NONE';
-//     console.log(`Disabled auto-layout for node: ${node.name}`);
-//   }
-// }
 
 function applyPaddingStyles(node, styles) {
   if (node.type !== 'FRAME') {
@@ -1031,6 +1020,11 @@ function parseFontShorthand(fontValue) {
 
 
 function applyBorderStyles(node, styles) {
+  if (node.name.toLowerCase().includes('svg') || node.name.toLowerCase().includes('image')) {
+    console.warn(`Node type '${node.name}' contains 'svg' or 'image'. Skipping border styles for node: ${node.name}`);
+    return;
+  } 
+
   if (styles['border'] || styles['border-color'] || styles['border-width']) {
     let borderColor = styles['border-color'] || 'rgba(255,255,255,1)';
     let borderWidth = styles['border-width'] ? parseNumericValue(styles['border-width']) : 1;
@@ -1136,7 +1130,7 @@ function cssColorToFigmaRGB(cssColor) {
       b: color.blue() / 255,
     };
   } catch (error) {
-    console.error(`Failed to parse CSS color: ${cssColor}`, error);
+    console.warn(`Failed to parse CSS color: ${cssColor}`, error);
     return { r: 1, g: 1, b: 1 }; // Default to white
   }
 }
@@ -1152,31 +1146,69 @@ function hexToFigmaRGB(hex) {
 }
 
 // Image Handling
-async function handleImageNode(domNode) {
+async function handleImageNode(domNode, parentNode) {
   try {
     const imgUrl = domNode.attribs.src;
+    console.error(imgUrl);
     if (!imgUrl) return null;
 
-    const response = await fetch(imgUrl);
-    if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+    // Create the Image object from the URL or Data URL
+    const image = await figma.createImageAsync(imgUrl);
 
-    const arrayBuffer = await response.arrayBuffer();
-    const image = figma.createRectangle();
-    const imageHash = figma.createImage(new Uint8Array(arrayBuffer)).hash;
-    image.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: imageHash }];
-    image.name = 'Image';
+    // Create a rectangle node to hold the image
+    const imageNode = figma.createRectangle();
+    imageNode.name = 'Image';
 
-    const width = parseNumericValue(domNode.attribs.width) || 100;
-    const height = parseNumericValue(domNode.attribs.height) || 100;
-    image.resize(width, height);
-    console.log(`Created Image node with size: ${width}x${height}`);
+    // Get the image's intrinsic dimensions
+    const { width: imageWidth, height: imageHeight } = await image.getSizeAsync();
 
-    return image;
+    // Get desired dimensions from attributes or use intrinsic dimensions
+    let desiredWidth = parseNumericValue(domNode.attribs.width) || imageWidth;
+    let desiredHeight = parseNumericValue(domNode.attribs.height) || imageHeight;
+
+    // Get the parent node's dimensions
+    const parentWidth = parentNode.width;
+    const parentHeight = parentNode.height;
+
+    // Calculate scaling factors
+    const widthScale = parentWidth / desiredWidth;
+    const heightScale = parentHeight / desiredHeight;
+    const scale = Math.min(widthScale, heightScale, 1); // Use the smaller scale factor, and don't upscale
+
+    // Apply the scale factor to desired dimensions
+    desiredWidth *= scale;
+    desiredHeight *= scale;
+
+    // Resize the image node
+    imageNode.resize(desiredWidth, desiredHeight);
+
+    // Set the image fill
+    console.error(image.hash);
+    imageNode.fills = [
+      {
+        type: 'IMAGE',
+        imageHash: image.hash,
+        scaleMode: 'FILL',
+      },
+    ];
+
+    // Position the image node within the parent node (e.g., center it)
+    imageNode.x = (parentWidth - desiredWidth) / 2;
+    imageNode.y = (parentHeight - desiredHeight) / 2;
+
+    // Append the image node to the parent node
+    parentNode.appendChild(imageNode);
+
+    console.log(`Created Image node with size: ${desiredWidth}x${desiredHeight}`);
+
+    return imageNode;
   } catch (error) {
-    console.error('Error fetching image:', error);
+    console.error('Error creating image node:', error);
     return null;
   }
 }
+
+
 
 // Design System Import
 async function importDesignSystem(designData) {
@@ -1249,31 +1281,6 @@ async function importColors(colors) {
     paintStyle.paints = [{ type: 'SOLID', color }];
   }
 }
-
-// async function importFonts(fonts) {
-//   const loadedFonts = new Set();
-//   for (const fontToken of fonts) {
-//     const fontFamily = fontToken.value;
-//     const fontStyle = fontToken.style || 'Regular';
-    
-//     const fontKey = `${fontFamily}-${fontStyle}`;
-//     if (!loadedFonts.has(fontKey)) {
-//       try {
-//         await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
-//         loadedFonts.add(fontKey);
-//         console.log(`Loaded font: ${fontFamily} ${fontStyle}`);
-//       } catch (error) {
-//         // console.warn(`Failed to load font: ${fontFamily} ${fontStyle}`, error);
-//       }
-//     } else {
-//       console.log(`Font already loaded: ${fontFamily} ${fontStyle}`);
-//     }
-
-//     const textStyle = figma.createTextStyle();
-//     textStyle.name = fontToken.name || `${fontFamily} ${fontStyle}`;
-//     textStyle.fontName = { family: fontFamily, style: fontStyle };
-//   }
-// }
 
 async function importButtons(buttons) {
   for (const buttonToken of buttons) {

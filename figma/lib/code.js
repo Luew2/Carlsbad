@@ -108,52 +108,47 @@ function _createFigmaComponentFromData() {
           frame.name = name || 'Component';
           frame.x = position.x;
           frame.y = position.y;
-
-          // Set the layout mode and sizing modes for auto-layout
-          frame.layoutMode = 'VERTICAL';
-          frame.primaryAxisSizingMode = 'AUTO';
-          frame.counterAxisSizingMode = 'AUTO';
           frame.clipsContent = false; // Prevent content from being clipped
 
           console.log("Creating component: ".concat(frame.name));
           if (!(dom.children && dom.children.length > 0)) {
-            _context2.next = 33;
+            _context2.next = 30;
             break;
           }
           _iterator11 = _createForOfIteratorHelper(dom.children);
-          _context2.prev = 17;
+          _context2.prev = 14;
           _iterator11.s();
-        case 19:
+        case 16:
           if ((_step11 = _iterator11.n()).done) {
-            _context2.next = 25;
+            _context2.next = 22;
             break;
           }
           childNode = _step11.value;
-          _context2.next = 23;
+          _context2.next = 20;
           return processDomNode(childNode, frame, cssStyles, {}, 0, frame.layoutMode);
-        case 23:
-          _context2.next = 19;
+        case 20:
+          _context2.next = 16;
           break;
-        case 25:
-          _context2.next = 30;
+        case 22:
+          _context2.next = 27;
           break;
+        case 24:
+          _context2.prev = 24;
+          _context2.t0 = _context2["catch"](14);
+          _iterator11.e(_context2.t0);
         case 27:
           _context2.prev = 27;
-          _context2.t0 = _context2["catch"](17);
-          _iterator11.e(_context2.t0);
-        case 30:
-          _context2.prev = 30;
           _iterator11.f();
-          return _context2.finish(30);
-        case 33:
+          return _context2.finish(27);
+        case 30:
           figma.currentPage.appendChild(frame);
           console.log("Appended frame: ".concat(frame.name, " to current page."));
           return _context2.abrupt("return", frame);
-        case 36:
+        case 33:
         case "end":
           return _context2.stop();
       }
-    }, _callee2, null, [[17, 27, 30, 33]]);
+    }, _callee2, null, [[14, 24, 27, 30]]);
   }));
   return _createFigmaComponentFromData.apply(this, arguments);
 }
@@ -242,6 +237,12 @@ function _processDomNode() {
     var parentStyles,
       depth,
       parentLayoutMode,
+      parentIsHidden,
+      styles,
+      nodeIsHidden,
+      _iterator12,
+      _step12,
+      childNode,
       indent,
       figmaNode,
       nodeStyles,
@@ -249,9 +250,9 @@ function _processDomNode() {
       combinedStyles,
       relativeX,
       relativeY,
-      _iterator12,
-      _step12,
-      childNode,
+      _iterator13,
+      _step13,
+      _childNode,
       textContent,
       _combinedStyles,
       _relativeX,
@@ -263,46 +264,93 @@ function _processDomNode() {
           parentStyles = _args3.length > 3 && _args3[3] !== undefined ? _args3[3] : {};
           depth = _args3.length > 4 && _args3[4] !== undefined ? _args3[4] : 0;
           parentLayoutMode = _args3.length > 5 && _args3[5] !== undefined ? _args3[5] : 'NONE';
+          parentIsHidden = _args3.length > 6 && _args3[6] !== undefined ? _args3[6] : false;
           if (domNode) {
-            _context3.next = 5;
+            _context3.next = 6;
             break;
           }
           return _context3.abrupt("return");
-        case 5:
+        case 6:
+          // Get the styles for the domNode
+          styles = getNodeStyles(domNode, cssStyles); // Check if the node should be visually hidden
+          nodeIsHidden = isVisuallyHidden(styles) || styles['display'] === 'none' || styles['visibility'] === 'hidden';
+          if (!(parentIsHidden && domNode.type === 'text')) {
+            _context3.next = 11;
+            break;
+          }
+          console.log("".concat(indent, "Skipping text node due to hidden parent at depth ").concat(depth));
+          return _context3.abrupt("return");
+        case 11:
+          if (!nodeIsHidden) {
+            _context3.next = 32;
+            break;
+          }
+          if (!(domNode.children && domNode.children.length > 0)) {
+            _context3.next = 31;
+            break;
+          }
+          console.log("".concat(indent, "Processing ").concat(domNode.children.length, " children of Frame node at depth ").concat(depth));
+          _iterator12 = _createForOfIteratorHelper(domNode.children);
+          _context3.prev = 15;
+          _iterator12.s();
+        case 17:
+          if ((_step12 = _iterator12.n()).done) {
+            _context3.next = 23;
+            break;
+          }
+          childNode = _step12.value;
+          _context3.next = 21;
+          return processDomNode(childNode, parentFigmaNode, cssStyles, parentStyles, depth + 1, parentLayoutMode, parentIsHidden = true);
+        case 21:
+          _context3.next = 17;
+          break;
+        case 23:
+          _context3.next = 28;
+          break;
+        case 25:
+          _context3.prev = 25;
+          _context3.t0 = _context3["catch"](15);
+          _iterator12.e(_context3.t0);
+        case 28:
+          _context3.prev = 28;
+          _iterator12.f();
+          return _context3.finish(28);
+        case 31:
+          return _context3.abrupt("return");
+        case 32:
           indent = '  '.repeat(depth);
           console.log("".concat(indent, "Processing DOM node at depth ").concat(depth, ":"), domNode);
           console.log("".concat(indent, "DOM node type:"), domNode.type);
           nodeStyles = {};
           if (!(domNode.type === 'tag')) {
-            _context3.next = 65;
+            _context3.next = 92;
             break;
           }
           tagName = domNode.name ? domNode.name.toLowerCase() : '';
           console.log("".concat(indent, "Tag name: ").concat(tagName));
           if (!(tagName === 'svg')) {
-            _context3.next = 18;
+            _context3.next = 45;
             break;
           }
-          _context3.next = 15;
+          _context3.next = 42;
           return handleSVGElement(domNode, cssStyles);
-        case 15:
+        case 42:
           figmaNode = _context3.sent;
-          _context3.next = 25;
+          _context3.next = 53;
           break;
-        case 18:
+        case 45:
           if (!(tagName === 'img')) {
-            _context3.next = 24;
+            _context3.next = 52;
             break;
           }
-          _context3.next = 21;
-          return handleImageNode(domNode);
-        case 21:
+          _context3.next = 48;
+          return handleImageNode(domNode, parentFigmaNode);
+        case 48:
           figmaNode = _context3.sent;
-          _context3.next = 25;
-          break;
-        case 24:
+          return _context3.abrupt("return");
+        case 52:
           figmaNode = createFigmaNodeForHTML(tagName);
-        case 25:
+        case 53:
           nodeStyles = getNodeStyles(domNode, cssStyles);
           console.log("".concat(indent, "Node styles:"), nodeStyles);
           if (figmaNode) {
@@ -310,7 +358,7 @@ function _processDomNode() {
             console.log("".concat(indent, "Appended node: ").concat(figmaNode.name, " to parent: ").concat(parentFigmaNode.name));
           }
           if (!figmaNode) {
-            _context3.next = 63;
+            _context3.next = 90;
             break;
           }
           combinedStyles = _objectSpread(_objectSpread({}, parentStyles), nodeStyles); // Apply position from JSON data
@@ -330,85 +378,79 @@ function _processDomNode() {
             console.log("".concat(indent, "Set node position to x: ").concat(figmaNode.x, ", y: ").concat(figmaNode.y));
           }
           if (!(figmaNode.type === 'TEXT')) {
-            _context3.next = 40;
+            _context3.next = 68;
             break;
           }
-          _context3.next = 36;
+          _context3.next = 64;
           return setTextNodeContent(figmaNode, domNode, combinedStyles);
-        case 36:
-          _context3.next = 38;
+        case 64:
+          _context3.next = 66;
           return applyTextStyles(figmaNode, combinedStyles);
-        case 38:
-          _context3.next = 63;
+        case 66:
+          _context3.next = 90;
           break;
-        case 40:
-          _context3.next = 42;
+        case 68:
+          _context3.next = 70;
           return applyStylesToFigmaNode(figmaNode, parentFigmaNode, combinedStyles);
-        case 42:
+        case 70:
           if (!(figmaNode.type === 'FRAME')) {
-            _context3.next = 63;
+            _context3.next = 90;
             break;
-          }
-          if (figmaNode.x === 0 && figmaNode.y === 0) {
-            figmaNode.layoutMode = 'VERTICAL';
-            figmaNode.primaryAxisSizingMode = 'AUTO';
-            figmaNode.counterAxisSizingMode = 'AUTO';
-            figmaNode.clipsContent = false;
           }
           if (!(domNode.children && domNode.children.length > 0)) {
-            _context3.next = 63;
+            _context3.next = 90;
             break;
           }
           console.log("".concat(indent, "Processing ").concat(domNode.children.length, " children of Frame node at depth ").concat(depth));
-          _iterator12 = _createForOfIteratorHelper(domNode.children);
-          _context3.prev = 47;
-          _iterator12.s();
-        case 49:
-          if ((_step12 = _iterator12.n()).done) {
-            _context3.next = 55;
+          _iterator13 = _createForOfIteratorHelper(domNode.children);
+          _context3.prev = 74;
+          _iterator13.s();
+        case 76:
+          if ((_step13 = _iterator13.n()).done) {
+            _context3.next = 82;
             break;
           }
-          childNode = _step12.value;
-          _context3.next = 53;
-          return processDomNode(childNode, figmaNode, cssStyles, nodeStyles, depth + 1, figmaNode.layoutMode);
-        case 53:
-          _context3.next = 49;
-          break;
-        case 55:
-          _context3.next = 60;
-          break;
-        case 57:
-          _context3.prev = 57;
-          _context3.t0 = _context3["catch"](47);
-          _iterator12.e(_context3.t0);
-        case 60:
-          _context3.prev = 60;
-          _iterator12.f();
-          return _context3.finish(60);
-        case 63:
+          _childNode = _step13.value;
           _context3.next = 80;
+          return processDomNode(_childNode, figmaNode, cssStyles, nodeStyles, depth + 1, figmaNode.layoutMode);
+        case 80:
+          _context3.next = 76;
           break;
-        case 65:
+        case 82:
+          _context3.next = 87;
+          break;
+        case 84:
+          _context3.prev = 84;
+          _context3.t1 = _context3["catch"](74);
+          _iterator13.e(_context3.t1);
+        case 87:
+          _context3.prev = 87;
+          _iterator13.f();
+          return _context3.finish(87);
+        case 90:
+          _context3.next = 107;
+          break;
+        case 92:
           if (!(domNode.type === 'text')) {
-            _context3.next = 80;
+            _context3.next = 107;
             break;
           }
           textContent = domNode.data.trim();
           if (!textContent) {
-            _context3.next = 80;
+            _context3.next = 107;
             break;
           }
           figmaNode = figma.createText();
           _combinedStyles = _objectSpread({}, parentStyles);
-          _context3.next = 72;
+          _context3.next = 99;
           return setTextNodeContent(figmaNode, domNode, _combinedStyles);
-        case 72:
-          _context3.next = 74;
+        case 99:
+          _context3.next = 101;
           return applyTextStyles(figmaNode, _combinedStyles);
-        case 74:
-          _context3.next = 76;
+        case 101:
+          _context3.next = 103;
           return applyStylesToFigmaNode(figmaNode, parentFigmaNode, _combinedStyles);
-        case 76:
+        case 103:
           parentFigmaNode.appendChild(figmaNode);
 
           // Apply position from JSON data
@@ -420,11 +462,11 @@ function _processDomNode() {
             figmaNode.x = Math.max(0, _relativeX);
             figmaNode.y = Math.max(0, _relativeY);
           }
-        case 80:
+        case 107:
         case "end":
           return _context3.stop();
       }
-    }, _callee3, null, [[47, 57, 60, 63]]);
+    }, _callee3, null, [[15, 25, 28, 31], [74, 84, 87, 90]]);
   }));
   return _processDomNode.apply(this, arguments);
 }
@@ -848,6 +890,20 @@ function getSelectorsForNode(domNode) {
   }
   return selectors;
 }
+function isVisuallyHidden(styles) {
+  // Check for common techniques used to hide elements visually
+  var hiddenByClip = styles['clip'] === 'rect(0px, 0px, 0px, 0px)' || styles['clip'] === 'rect(0, 0, 0, 0)';
+  var hiddenByClipPath = styles['clip-path'] && styles['clip-path'].includes('inset(50%');
+  var hiddenBySize = parseFloat(styles['width']) === 0 || parseFloat(styles['height']) === 0 || parseFloat(styles['width']) === 1 || parseFloat(styles['height']) === 1;
+  var hiddenByOpacity = styles['opacity'] === '0';
+  var hiddenByOverflow = styles['overflow'] === 'hidden' && hiddenBySize;
+  var hiddenByPosition = styles['position'] === 'absolute' && hiddenBySize;
+
+  // Additional checks
+  var visibilityHidden = styles['visibility'] === 'hidden';
+  var displayNone = styles['display'] === 'none';
+  return hiddenByClip || hiddenByClipPath || hiddenByOverflow && hiddenBySize || hiddenByPosition && hiddenBySize || hiddenByOpacity || visibilityHidden || displayNone;
+}
 function applyStylesToFigmaNode(_x11, _x12, _x13) {
   return _applyStylesToFigmaNode.apply(this, arguments);
 }
@@ -857,18 +913,17 @@ function _applyStylesToFigmaNode() {
       while (1) switch (_context7.prev = _context7.next) {
         case 0:
           console.log("Applying styles to node: ".concat(node.name), styles);
-
-          // applyPositionToNode(node, parentFigmaNode, styles);
           _context7.prev = 1;
           // Common styles for all node types
           applyOpacityStyles(node, styles);
           applyTransformStyles(node, styles);
           applySizeStyles(node, styles);
+
+          // Node-type-specific styles
           if (!(node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'COMPONENT')) {
             _context7.next = 13;
             break;
           }
-          // Apply container-specific styles
           applyBackgroundStyles(node, styles);
           applyLayoutStyles(node, parentFigmaNode, styles);
           applyAutoLayoutStyles(node, styles);
@@ -934,6 +989,10 @@ function applyVectorStyles(node, styles) {
   }
 }
 function applyBackgroundStyles(node, styles) {
+  if (!('fills' in node)) {
+    console.warn("Node type '".concat(node.type, "' does not support fills. Skipping background styles for node: ").concat(node.name));
+    return;
+  }
   if (styles['background']) {
     var _extractColorFromBack = extractColorFromBackground(styles['background']),
       color = _extractColorFromBack.color,
@@ -959,6 +1018,10 @@ function applyBackgroundStyles(node, styles) {
   }
 }
 function applyGeometryStyles(node, styles) {
+  if (node.name.toLowerCase().includes('svg') || node.name.toLowerCase().includes('image')) {
+    console.warn("Node type '".concat(node.name, "' contains 'svg' or 'image'. Skipping geometry styles for node: ").concat(node.name));
+    return;
+  }
   if (styles['border-radius']) {
     node.cornerRadius = parseNumericValue(styles['border-radius']) || 0;
     console.log("Set border radius to:", node.cornerRadius);
@@ -995,6 +1058,10 @@ function applyGeometryStyles(node, styles) {
   }
 }
 function applyLayoutStyles(node, styles) {
+  if (node.name.toLowerCase().includes('svg') || node.name.toLowerCase().includes('image')) {
+    console.warn("Node type '".concat(node.name, "' contains 'svg' or 'image'. Skipping layout styles for node: ").concat(node.name));
+    return;
+  }
   console.log("applying layout styles to", node);
   // Check if display is flex
   if (styles['display'] === 'flex') {
@@ -1054,43 +1121,6 @@ function applyLayoutStyles(node, styles) {
   applyPaddingStyles(node, styles);
   applyMarginStyles(node, styles);
 }
-
-// function applyLayoutStyles(node, parentFigmaNode, styles) {
-//   // Handle positioning
-//   if (parentFigmaNode.layoutMode !== 'NONE') {
-//     if (styles['position'] === 'absolute' || styles['position'] === 'relative') {
-//       // Extract 'left' and 'top' positions
-//       let x = parseNumericValue(styles['left']) || 0;
-//       let y = parseNumericValue(styles['top']) || 0;
-
-//       // Apply positions to the node
-//       if ('x' in node && 'y' in node) {
-//         node.x = x;
-//         node.y = y;
-//         console.log(`Set node ${node.name} position to x: ${x}, y: ${y}`);
-//       } else {
-//         console.warn(`Node ${node.name} does not support positioning.`);
-//       }
-
-//       // For absolute positioning within auto-layout frames
-//       if (styles['position'] === 'absolute' && parentFigmaNode.layoutMode !== 'NONE') {
-//         if ('layoutPositioning' in node) {
-//           node.layoutPositioning = 'ABSOLUTE';
-//           console.log(`Set node ${node.name} to absolute positioning.`);
-//         }
-//       }
-//     }
-//   }
-
-// function parseNumericValue(value) {
-//   if (!value) return null;
-//   const match = value.match(/(-?\d+(\.\d+)?)(px|rem|em)?/);
-//   if (match) {
-//     return parseFloat(match[1]);
-//   }
-//   return null;
-// }
-
 function applySizeStyles(node, styles) {
   var width = parseNumericValue(styles['width']) || node.width;
   var height = parseNumericValue(styles['height']) || node.height;
@@ -1129,35 +1159,6 @@ function calculateNodePosition(node, parentFigmaNode, styles) {
     y: y
   };
 }
-
-// function applyLayoutStyles(node, parentLayoutMode, styles) {
-//   applyPaddingStyles(node, styles);
-
-//   if (styles['position'] === 'absolute' && parentLayoutMode !== "NONE") {
-//     // In Figma, this corresponds to setting the node to absolute positioning
-//     if ('layoutPositioning' in node ) {
-//       node.layoutPositioning = 'ABSOLUTE';
-//     }
-//     console.log(`Set node ${node.name} to absolute positioning.`);
-//   } else {
-//     // Ensure the node is set to normal positioning
-//     if ('layoutPositioning' in node) {
-//       node.layoutPositioning = 'AUTO'; // or 'NORMAL'
-//     }
-//   }
-
-//   if (styles['display'] === 'flex') {
-//     const flexDirection = styles['flex-direction'] || 'row';
-//     node.layoutMode = flexDirection === 'column' ? 'VERTICAL' : 'HORIZONTAL';
-//     node.primaryAxisSizingMode = 'AUTO';
-//     node.counterAxisSizingMode = 'AUTO';
-//     console.log(`Set node to auto-layout with layoutMode: ${node.layoutMode}`);
-//   } else if (styles['display']) {
-//     node.layoutMode = 'NONE';
-//     console.log(`Disabled auto-layout for node: ${node.name}`);
-//   }
-// }
-
 function applyPaddingStyles(node, styles) {
   if (node.type !== 'FRAME') {
     console.warn("Cannot apply padding to node type: ".concat(node.type));
@@ -1284,7 +1285,7 @@ function applyTextStyles(_x14, _x15) {
 }
 function _applyTextStyles() {
   _applyTextStyles = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8(node, styles) {
-    var fontFamilies, fontStyleCSS, fontWeight, _iterator13, _step13, fontFamily, figmaFontStyle, fontName, fallbackFont, color, alignmentMap, verticalAlign, verticalAlignmentMap, lineHeightValue;
+    var fontFamilies, fontStyleCSS, fontWeight, _iterator14, _step14, fontFamily, figmaFontStyle, fontName, fallbackFont, color, alignmentMap, verticalAlign, verticalAlignmentMap, lineHeightValue;
     return _regeneratorRuntime().wrap(function _callee8$(_context8) {
       while (1) switch (_context8.prev = _context8.next) {
         case 0:
@@ -1302,15 +1303,15 @@ function _applyTextStyles() {
           console.log("Font style: ".concat(fontStyleCSS, ", Font weight: ").concat(fontWeight));
 
           // Iterate through font families and attempt to load each
-          _iterator13 = _createForOfIteratorHelper(fontFamilies);
+          _iterator14 = _createForOfIteratorHelper(fontFamilies);
           _context8.prev = 7;
-          _iterator13.s();
+          _iterator14.s();
         case 9:
-          if ((_step13 = _iterator13.n()).done) {
+          if ((_step14 = _iterator14.n()).done) {
             _context8.next = 26;
             break;
           }
-          fontFamily = _step13.value;
+          fontFamily = _step14.value;
           figmaFontStyle = mapFontWeightToFigmaStyle(fontStyleCSS, fontWeight);
           fontName = {
             family: fontFamily,
@@ -1336,10 +1337,10 @@ function _applyTextStyles() {
         case 28:
           _context8.prev = 28;
           _context8.t1 = _context8["catch"](7);
-          _iterator13.e(_context8.t1);
+          _iterator14.e(_context8.t1);
         case 31:
           _context8.prev = 31;
-          _iterator13.f();
+          _iterator14.f();
           return _context8.finish(31);
         case 34:
           // If all fonts fail to load, fallback to Arial
@@ -1427,6 +1428,10 @@ function _applyTextStyles() {
   return _applyTextStyles.apply(this, arguments);
 }
 function applyBorderStyles(node, styles) {
+  if (node.name.toLowerCase().includes('svg') || node.name.toLowerCase().includes('image')) {
+    console.warn("Node type '".concat(node.name, "' contains 'svg' or 'image'. Skipping border styles for node: ").concat(node.name));
+    return;
+  }
   if (styles['border'] || styles['border-color'] || styles['border-width']) {
     var borderColor = styles['border-color'] || 'rgba(255,255,255,1)';
     var borderWidth = styles['border-width'] ? parseNumericValue(styles['border-width']) : 1;
@@ -1545,7 +1550,7 @@ function cssColorToFigmaRGB(cssColor) {
       b: color.blue() / 255
     };
   } catch (error) {
-    console.error("Failed to parse CSS color: ".concat(cssColor), error);
+    console.warn("Failed to parse CSS color: ".concat(cssColor), error);
     return {
       r: 1,
       g: 1,
@@ -1564,69 +1569,89 @@ function hexToFigmaRGB(hex) {
 }
 
 // Image Handling
-function handleImageNode(_x16) {
+function handleImageNode(_x16, _x17) {
   return _handleImageNode.apply(this, arguments);
 } // Design System Import
 function _handleImageNode() {
-  _handleImageNode = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee9(domNode) {
-    var imgUrl, response, arrayBuffer, image, imageHash, width, height;
+  _handleImageNode = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee9(domNode, parentNode) {
+    var imgUrl, image, imageNode, _yield$image$getSizeA, imageWidth, imageHeight, desiredWidth, desiredHeight, parentWidth, parentHeight, widthScale, heightScale, scale;
     return _regeneratorRuntime().wrap(function _callee9$(_context9) {
       while (1) switch (_context9.prev = _context9.next) {
         case 0:
           _context9.prev = 0;
           imgUrl = domNode.attribs.src;
+          console.error(imgUrl);
           if (imgUrl) {
-            _context9.next = 4;
+            _context9.next = 5;
             break;
           }
           return _context9.abrupt("return", null);
-        case 4:
-          _context9.next = 6;
-          return fetch(imgUrl);
-        case 6:
-          response = _context9.sent;
-          if (response.ok) {
-            _context9.next = 9;
-            break;
-          }
-          throw new Error("Network response was not ok: ".concat(response.statusText));
-        case 9:
-          _context9.next = 11;
-          return response.arrayBuffer();
-        case 11:
-          arrayBuffer = _context9.sent;
-          image = figma.createRectangle();
-          imageHash = figma.createImage(new Uint8Array(arrayBuffer)).hash;
-          image.fills = [{
+        case 5:
+          _context9.next = 7;
+          return figma.createImageAsync(imgUrl);
+        case 7:
+          image = _context9.sent;
+          // Create a rectangle node to hold the image
+          imageNode = figma.createRectangle();
+          imageNode.name = 'Image';
+
+          // Get the image's intrinsic dimensions
+          _context9.next = 12;
+          return image.getSizeAsync();
+        case 12:
+          _yield$image$getSizeA = _context9.sent;
+          imageWidth = _yield$image$getSizeA.width;
+          imageHeight = _yield$image$getSizeA.height;
+          // Get desired dimensions from attributes or use intrinsic dimensions
+          desiredWidth = parseNumericValue(domNode.attribs.width) || imageWidth;
+          desiredHeight = parseNumericValue(domNode.attribs.height) || imageHeight; // Get the parent node's dimensions
+          parentWidth = parentNode.width;
+          parentHeight = parentNode.height; // Calculate scaling factors
+          widthScale = parentWidth / desiredWidth;
+          heightScale = parentHeight / desiredHeight;
+          scale = Math.min(widthScale, heightScale, 1); // Use the smaller scale factor, and don't upscale
+          // Apply the scale factor to desired dimensions
+          desiredWidth *= scale;
+          desiredHeight *= scale;
+
+          // Resize the image node
+          imageNode.resize(desiredWidth, desiredHeight);
+
+          // Set the image fill
+          console.error(image.hash);
+          imageNode.fills = [{
             type: 'IMAGE',
-            scaleMode: 'FILL',
-            imageHash: imageHash
+            imageHash: image.hash,
+            scaleMode: 'FILL'
           }];
-          image.name = 'Image';
-          width = parseNumericValue(domNode.attribs.width) || 100;
-          height = parseNumericValue(domNode.attribs.height) || 100;
-          image.resize(width, height);
-          console.log("Created Image node with size: ".concat(width, "x").concat(height));
-          return _context9.abrupt("return", image);
-        case 23:
-          _context9.prev = 23;
+
+          // Position the image node within the parent node (e.g., center it)
+          imageNode.x = (parentWidth - desiredWidth) / 2;
+          imageNode.y = (parentHeight - desiredHeight) / 2;
+
+          // Append the image node to the parent node
+          parentNode.appendChild(imageNode);
+          console.log("Created Image node with size: ".concat(desiredWidth, "x").concat(desiredHeight));
+          return _context9.abrupt("return", imageNode);
+        case 34:
+          _context9.prev = 34;
           _context9.t0 = _context9["catch"](0);
-          console.error('Error fetching image:', _context9.t0);
+          console.error('Error creating image node:', _context9.t0);
           return _context9.abrupt("return", null);
-        case 27:
+        case 38:
         case "end":
           return _context9.stop();
       }
-    }, _callee9, null, [[0, 23]]);
+    }, _callee9, null, [[0, 34]]);
   }));
   return _handleImageNode.apply(this, arguments);
 }
-function importDesignSystem(_x17) {
+function importDesignSystem(_x18) {
   return _importDesignSystem.apply(this, arguments);
 }
 function _importDesignSystem() {
   _importDesignSystem = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee10(designData) {
-    var currentYPosition, componentSpacing, _iterator14, _step14, componentData, frame;
+    var currentYPosition, componentSpacing, _iterator15, _step15, componentData, frame;
     return _regeneratorRuntime().wrap(function _callee10$(_context10) {
       while (1) switch (_context10.prev = _context10.next) {
         case 0:
@@ -1665,15 +1690,15 @@ function _importDesignSystem() {
           // Initialize the position tracking variable
           currentYPosition = 0;
           componentSpacing = 100; // Space between components, adjust as needed
-          _iterator14 = _createForOfIteratorHelper(designData.components);
+          _iterator15 = _createForOfIteratorHelper(designData.components);
           _context10.prev = 19;
-          _iterator14.s();
+          _iterator15.s();
         case 21:
-          if ((_step14 = _iterator14.n()).done) {
+          if ((_step15 = _iterator15.n()).done) {
             _context10.next = 29;
             break;
           }
-          componentData = _step14.value;
+          componentData = _step15.value;
           _context10.next = 25;
           return createFigmaComponentFromData(componentData, {
             x: 0,
@@ -1692,10 +1717,10 @@ function _importDesignSystem() {
         case 31:
           _context10.prev = 31;
           _context10.t0 = _context10["catch"](19);
-          _iterator14.e(_context10.t0);
+          _iterator15.e(_context10.t0);
         case 34:
           _context10.prev = 34;
-          _iterator14.f();
+          _iterator15.f();
           return _context10.finish(34);
         case 37:
           if (!designData.logoUrl) {
@@ -1721,7 +1746,7 @@ function _importDesignSystem() {
   }));
   return _importDesignSystem.apply(this, arguments);
 }
-function importLogo(_x18) {
+function importLogo(_x19) {
   return _importLogo.apply(this, arguments);
 }
 function _importLogo() {
@@ -1768,40 +1793,19 @@ function _importLogo() {
   }));
   return _importLogo.apply(this, arguments);
 }
-function importColors(_x19) {
+function importColors(_x20) {
   return _importColors.apply(this, arguments);
-} // async function importFonts(fonts) {
-//   const loadedFonts = new Set();
-//   for (const fontToken of fonts) {
-//     const fontFamily = fontToken.value;
-//     const fontStyle = fontToken.style || 'Regular';
-//     const fontKey = `${fontFamily}-${fontStyle}`;
-//     if (!loadedFonts.has(fontKey)) {
-//       try {
-//         await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
-//         loadedFonts.add(fontKey);
-//         console.log(`Loaded font: ${fontFamily} ${fontStyle}`);
-//       } catch (error) {
-//         // console.warn(`Failed to load font: ${fontFamily} ${fontStyle}`, error);
-//       }
-//     } else {
-//       console.log(`Font already loaded: ${fontFamily} ${fontStyle}`);
-//     }
-//     const textStyle = figma.createTextStyle();
-//     textStyle.name = fontToken.name || `${fontFamily} ${fontStyle}`;
-//     textStyle.fontName = { family: fontFamily, style: fontStyle };
-//   }
-// }
+}
 function _importColors() {
   _importColors = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee12(colors) {
-    var _iterator15, _step15, colorToken, paintStyle, color;
+    var _iterator16, _step16, colorToken, paintStyle, color;
     return _regeneratorRuntime().wrap(function _callee12$(_context12) {
       while (1) switch (_context12.prev = _context12.next) {
         case 0:
-          _iterator15 = _createForOfIteratorHelper(colors);
+          _iterator16 = _createForOfIteratorHelper(colors);
           try {
-            for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
-              colorToken = _step15.value;
+            for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
+              colorToken = _step16.value;
               paintStyle = figma.createPaintStyle();
               paintStyle.name = colorToken.name || "Color ".concat(colorToken.value);
               color = hexToFigmaRGB(colorToken.value);
@@ -1811,9 +1815,9 @@ function _importColors() {
               }];
             }
           } catch (err) {
-            _iterator15.e(err);
+            _iterator16.e(err);
           } finally {
-            _iterator15.f();
+            _iterator16.f();
           }
         case 2:
         case "end":
@@ -1823,24 +1827,24 @@ function _importColors() {
   }));
   return _importColors.apply(this, arguments);
 }
-function importButtons(_x20) {
+function importButtons(_x21) {
   return _importButtons.apply(this, arguments);
 }
 function _importButtons() {
   _importButtons = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee13(buttons) {
-    var _iterator16, _step16, buttonToken;
+    var _iterator17, _step17, buttonToken;
     return _regeneratorRuntime().wrap(function _callee13$(_context13) {
       while (1) switch (_context13.prev = _context13.next) {
         case 0:
-          _iterator16 = _createForOfIteratorHelper(buttons);
+          _iterator17 = _createForOfIteratorHelper(buttons);
           _context13.prev = 1;
-          _iterator16.s();
+          _iterator17.s();
         case 3:
-          if ((_step16 = _iterator16.n()).done) {
+          if ((_step17 = _iterator17.n()).done) {
             _context13.next = 9;
             break;
           }
-          buttonToken = _step16.value;
+          buttonToken = _step17.value;
           _context13.next = 7;
           return createButtonComponent(buttonToken);
         case 7:
@@ -1852,10 +1856,10 @@ function _importButtons() {
         case 11:
           _context13.prev = 11;
           _context13.t0 = _context13["catch"](1);
-          _iterator16.e(_context13.t0);
+          _iterator17.e(_context13.t0);
         case 14:
           _context13.prev = 14;
-          _iterator16.f();
+          _iterator17.f();
           return _context13.finish(14);
         case 17:
         case "end":
@@ -1865,7 +1869,7 @@ function _importButtons() {
   }));
   return _importButtons.apply(this, arguments);
 }
-function createButtonComponent(_x21) {
+function createButtonComponent(_x22) {
   return _createButtonComponent.apply(this, arguments);
 } // Plugin UI Setup
 function _createButtonComponent() {
@@ -1955,7 +1959,7 @@ figma.ui.onmessage = /*#__PURE__*/function () {
       }
     }, _callee, null, [[4, 10, 14, 17]]);
   }));
-  return function (_x22) {
+  return function (_x23) {
     return _ref.apply(this, arguments);
   };
 }();
