@@ -111,44 +111,45 @@ function _createFigmaComponentFromData() {
           frame.clipsContent = false; // Prevent content from being clipped
 
           console.log("Creating component: ".concat(frame.name));
+          frame.fills = [];
           if (!(dom.children && dom.children.length > 0)) {
-            _context2.next = 30;
+            _context2.next = 31;
             break;
           }
           _iterator11 = _createForOfIteratorHelper(dom.children);
-          _context2.prev = 14;
+          _context2.prev = 15;
           _iterator11.s();
-        case 16:
+        case 17:
           if ((_step11 = _iterator11.n()).done) {
-            _context2.next = 22;
+            _context2.next = 23;
             break;
           }
           childNode = _step11.value;
-          _context2.next = 20;
+          _context2.next = 21;
           return processDomNode(childNode, frame, cssStyles, {}, 0, frame.layoutMode);
-        case 20:
-          _context2.next = 16;
+        case 21:
+          _context2.next = 17;
           break;
-        case 22:
-          _context2.next = 27;
+        case 23:
+          _context2.next = 28;
           break;
-        case 24:
-          _context2.prev = 24;
-          _context2.t0 = _context2["catch"](14);
+        case 25:
+          _context2.prev = 25;
+          _context2.t0 = _context2["catch"](15);
           _iterator11.e(_context2.t0);
-        case 27:
-          _context2.prev = 27;
+        case 28:
+          _context2.prev = 28;
           _iterator11.f();
-          return _context2.finish(27);
-        case 30:
+          return _context2.finish(28);
+        case 31:
           figma.currentPage.appendChild(frame);
           console.log("Appended frame: ".concat(frame.name, " to current page."));
           return _context2.abrupt("return", frame);
-        case 33:
+        case 34:
         case "end":
           return _context2.stop();
       }
-    }, _callee2, null, [[14, 24, 27, 30]]);
+    }, _callee2, null, [[15, 25, 28, 31]]);
   }));
   return _createFigmaComponentFromData.apply(this, arguments);
 }
@@ -219,6 +220,7 @@ function createFigmaNodeForHTML(tagName) {
     figmaNode = null;
   } else {
     figmaNode = figma.createFrame();
+    figmaNode.fills = [];
   }
   if (figmaNode) {
     figmaNode.name = tagName;

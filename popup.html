@@ -13,7 +13,20 @@
         <li id="export-image-option">Export as Image</li>
         <li id="export-pdf-option">Export as PDF</li>
         <li id="export-design-tokens-option">Export Design Tokens (JSON)</li>
-        <li id="export-components-option">Export Components (JSON)</li>
+        <!-- Modify Export Components list item to include the checkbox -->
+        <li>
+          <div>
+            <!-- Use a button for the export action -->
+            <button id="export-components-option">Export Components (JSON)</button>
+          </div>
+          <div>
+            <!-- Place the checkbox outside the button -->
+            <label>
+              <input type="checkbox" id="convert-images" />
+              Convert image URLs to Data URLs
+            </label>
+          </div>
+        </li>
       </ul>
     </div>
   </div>

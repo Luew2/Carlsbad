@@ -57,6 +57,8 @@ async function createFigmaComponentFromData(componentData, position = { x: 0, y:
 
   console.log(`Creating component: ${frame.name}`);
 
+  frame.fills = [];
+
 
   if (dom.children && dom.children.length > 0) {
     for (const childNode of dom.children) {
@@ -116,6 +118,7 @@ function createFigmaNodeForHTML(tagName) {
     figmaNode = null;
   } else {
     figmaNode = figma.createFrame();
+    figmaNode.fills = [];
   }
 
   if (figmaNode) {
