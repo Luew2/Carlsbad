@@ -7,8 +7,12 @@ Design System Extractor is a Chrome extension that allows you to extract and sav
 - Colors (excluding grayscale colors)
 - Fonts
 - Button Styles
+- Steal full components based on user selection
 
 The extension displays the extracted elements in an easy-to-use popup and provides functionality to copy color codes, font families, and button CSS styles to your clipboard.
+
+You can also export the design system to a PDF or import components into Figma and automatically convert html/css components to Figma objecs.
+
 
 ## Features
 
